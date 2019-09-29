@@ -1,0 +1,11 @@
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab1\NameList\NameList\bin\Debug\NameList.exe.config
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab1\NameList\NameList\bin\Debug\NameList.exe
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab1\NameList\NameList\bin\Debug\NameList.pdb
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab1\NameList\NameList\obj\Debug\NameList.csprojAssemblyReference.cache
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab1\NameList\NameList\obj\Debug\NameList.Form1.resources
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab1\NameList\NameList\obj\Debug\NameList.Properties.Resources.resources
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab1\NameList\NameList\obj\Debug\NameList.csproj.GenerateResource.cache
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab1\NameList\NameList\obj\Debug\NameList.exe
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab1\NameList\NameList\obj\Debug\NameList.pdb
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab1\NameList\NameList\obj\Debug\NameList.ListForm.resources
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab1\NameList\NameList\obj\Debug\NameList.NameForm.resources
