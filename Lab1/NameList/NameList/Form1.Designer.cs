@@ -62,6 +62,7 @@
             this.Clear_Names.TabIndex = 2;
             this.Clear_Names.Text = "Clear Names";
             this.Clear_Names.UseVisualStyleBackColor = true;
+            this.Clear_Names.Click += new System.EventHandler(this.Clear_Names_Click);
             // 
             // label1
             // 

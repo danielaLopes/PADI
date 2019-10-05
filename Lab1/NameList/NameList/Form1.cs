@@ -32,11 +32,6 @@ namespace NameList
             listForm.ShowDialog(); // Shows the form
         }
 
-        private void Clear_Names_Click(object sender, EventArgs e)
-        {
-            _names.Clear();
-        }
-
         private void Form1_Load(object sender, EventArgs e)
         {
 
@@ -45,6 +40,11 @@ namespace NameList
         private void label1_Click(object sender, EventArgs e)
         {
 
+        }
+
+        private void Clear_Names_Click(object sender, EventArgs e)
+        {
+            _names.Clear();
         }
     }
 }
