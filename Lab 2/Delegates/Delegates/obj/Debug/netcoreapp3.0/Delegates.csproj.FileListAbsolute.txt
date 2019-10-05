@@ -1,0 +1,11 @@
+C:\Users\franc\Desktop\Labs\Lab 2\Delegates\Delegates\bin\Debug\netcoreapp3.0\Delegates.exe
+C:\Users\franc\Desktop\Labs\Lab 2\Delegates\Delegates\bin\Debug\netcoreapp3.0\Delegates.deps.json
+C:\Users\franc\Desktop\Labs\Lab 2\Delegates\Delegates\bin\Debug\netcoreapp3.0\Delegates.runtimeconfig.json
+C:\Users\franc\Desktop\Labs\Lab 2\Delegates\Delegates\bin\Debug\netcoreapp3.0\Delegates.runtimeconfig.dev.json
+C:\Users\franc\Desktop\Labs\Lab 2\Delegates\Delegates\bin\Debug\netcoreapp3.0\Delegates.dll
+C:\Users\franc\Desktop\Labs\Lab 2\Delegates\Delegates\bin\Debug\netcoreapp3.0\Delegates.pdb
+C:\Users\franc\Desktop\Labs\Lab 2\Delegates\Delegates\obj\Debug\netcoreapp3.0\Delegates.csprojAssemblyReference.cache
+C:\Users\franc\Desktop\Labs\Lab 2\Delegates\Delegates\obj\Debug\netcoreapp3.0\Delegates.AssemblyInfoInputs.cache
+C:\Users\franc\Desktop\Labs\Lab 2\Delegates\Delegates\obj\Debug\netcoreapp3.0\Delegates.AssemblyInfo.cs
+C:\Users\franc\Desktop\Labs\Lab 2\Delegates\Delegates\obj\Debug\netcoreapp3.0\Delegates.dll
+C:\Users\franc\Desktop\Labs\Lab 2\Delegates\Delegates\obj\Debug\netcoreapp3.0\Delegates.pdb
