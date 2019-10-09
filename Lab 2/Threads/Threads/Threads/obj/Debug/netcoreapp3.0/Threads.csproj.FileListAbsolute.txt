@@ -1,0 +1,11 @@
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\PADI\Lab 2\Threads\Threads\Threads\bin\Debug\netcoreapp3.0\Threads.exe
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\PADI\Lab 2\Threads\Threads\Threads\bin\Debug\netcoreapp3.0\Threads.deps.json
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\PADI\Lab 2\Threads\Threads\Threads\bin\Debug\netcoreapp3.0\Threads.runtimeconfig.json
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\PADI\Lab 2\Threads\Threads\Threads\bin\Debug\netcoreapp3.0\Threads.runtimeconfig.dev.json
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\PADI\Lab 2\Threads\Threads\Threads\bin\Debug\netcoreapp3.0\Threads.dll
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\PADI\Lab 2\Threads\Threads\Threads\bin\Debug\netcoreapp3.0\Threads.pdb
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\PADI\Lab 2\Threads\Threads\Threads\obj\Debug\netcoreapp3.0\Threads.csprojAssemblyReference.cache
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\PADI\Lab 2\Threads\Threads\Threads\obj\Debug\netcoreapp3.0\Threads.AssemblyInfoInputs.cache
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\PADI\Lab 2\Threads\Threads\Threads\obj\Debug\netcoreapp3.0\Threads.AssemblyInfo.cs
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\PADI\Lab 2\Threads\Threads\Threads\obj\Debug\netcoreapp3.0\Threads.dll
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\PADI\Lab 2\Threads\Threads\Threads\obj\Debug\netcoreapp3.0\Threads.pdb

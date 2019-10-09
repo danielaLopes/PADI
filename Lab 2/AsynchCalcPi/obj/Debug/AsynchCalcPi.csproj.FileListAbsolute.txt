@@ -1,0 +1,7 @@
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab2\AsynchCalcPi\bin\Debug\AsynchCalcPi.exe
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab2\AsynchCalcPi\bin\Debug\AsynchCalcPi.pdb
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab2\AsynchCalcPi\obj\Debug\AsynchCalcPi.csprojAssemblyReference.cache
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab2\AsynchCalcPi\obj\Debug\AsynchCalcPi.Form1.resources
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab2\AsynchCalcPi\obj\Debug\AsynchCalcPi.csproj.GenerateResource.cache
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab2\AsynchCalcPi\obj\Debug\AsynchCalcPi.exe
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab2\AsynchCalcPi\obj\Debug\AsynchCalcPi.pdb
