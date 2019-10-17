@@ -8,19 +8,19 @@
     ".NETCoreApp,Version=v3.0": []
   },
   "packageFolders": {
-    "C:\\Users\\franc\\.nuget\\packages\\": {}
+    "C:\\Users\\Tiago\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\franc\\Desktop\\Labs\\Lab 2\\Events\\Events\\Events.csproj",
+      "projectUniqueName": "C:\\Users\\Tiago\\Desktop\\daniela\\Escola\\DANIELA\\Mestrado\\PADI\\PADI\\Lab 2\\Events\\Events\\Events.csproj",
       "projectName": "Events",
-      "projectPath": "C:\\Users\\franc\\Desktop\\Labs\\Lab 2\\Events\\Events\\Events.csproj",
-      "packagesPath": "C:\\Users\\franc\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\franc\\Desktop\\Labs\\Lab 2\\Events\\Events\\obj\\",
+      "projectPath": "C:\\Users\\Tiago\\Desktop\\daniela\\Escola\\DANIELA\\Mestrado\\PADI\\PADI\\Lab 2\\Events\\Events\\Events.csproj",
+      "packagesPath": "C:\\Users\\Tiago\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\Tiago\\Desktop\\daniela\\Escola\\DANIELA\\Mestrado\\PADI\\PADI\\Lab 2\\Events\\Events\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\franc\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\Tiago\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
