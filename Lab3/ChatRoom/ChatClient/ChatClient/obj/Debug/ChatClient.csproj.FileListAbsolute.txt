@@ -1,0 +1,14 @@
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\ChatClient\ChatClient\obj\Debug\ChatClient.csprojAssemblyReference.cache
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\ChatClient\ChatClient\obj\Debug\ChatClient.ChatRoomForm.resources
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\ChatClient\ChatClient\obj\Debug\ChatClient.Properties.Resources.resources
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\ChatClient\ChatClient\obj\Debug\ChatClient.csproj.GenerateResource.cache
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\ChatClient\ChatClient\bin\Debug\ChatClient.exe.config
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\ChatClient\ChatClient\bin\Debug\ChatClient.exe
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\ChatClient\ChatClient\bin\Debug\ChatClient.pdb
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\ChatClient\ChatClient\bin\Debug\CommonTypes.dll
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\ChatClient\ChatClient\bin\Debug\CommonTypes.pdb
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\ChatClient\ChatClient\obj\Debug\ChatClient.csproj.CopyComplete
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\ChatClient\ChatClient\obj\Debug\ChatClient.exe
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\ChatClient\ChatClient\obj\Debug\ChatClient.pdb
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\ChatClient\ChatClient\bin\Debug\Server.exe
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\ChatClient\ChatClient\bin\Debug\Server.pdb
