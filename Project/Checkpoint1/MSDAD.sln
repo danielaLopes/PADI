@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29324.140
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server", "ChatServer\Server.csproj", "{78581B6E-41D2-452F-B28A-30A6C80887C8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClassLibrary", "ClassLibrary\ClassLibrary.csproj", "{DDFD7B0B-AEC6-4ED4-BDD4-8CE212D28158}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client", "User\Client.csproj", "{482E69AC-74C8-421E-AE60-0C31859A1CC3}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{78581B6E-41D2-452F-B28A-30A6C80887C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{78581B6E-41D2-452F-B28A-30A6C80887C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{78581B6E-41D2-452F-B28A-30A6C80887C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{78581B6E-41D2-452F-B28A-30A6C80887C8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DDFD7B0B-AEC6-4ED4-BDD4-8CE212D28158}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DDFD7B0B-AEC6-4ED4-BDD4-8CE212D28158}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DDFD7B0B-AEC6-4ED4-BDD4-8CE212D28158}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DDFD7B0B-AEC6-4ED4-BDD4-8CE212D28158}.Release|Any CPU.Build.0 = Release|Any CPU
+		{482E69AC-74C8-421E-AE60-0C31859A1CC3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{482E69AC-74C8-421E-AE60-0C31859A1CC3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{482E69AC-74C8-421E-AE60-0C31859A1CC3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{482E69AC-74C8-421E-AE60-0C31859A1CC3}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {0A395438-F660-43C7-9482-6B28FBADD984}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,5 @@
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\CommonTypes\bin\Debug\CommonTypes.dll
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\CommonTypes\bin\Debug\CommonTypes.pdb
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\CommonTypes\obj\Debug\ClassLibrary.csprojAssemblyReference.cache
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\CommonTypes\obj\Debug\CommonTypes.dll
+C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\CommonTypes\obj\Debug\CommonTypes.pdb
