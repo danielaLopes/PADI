@@ -44,7 +44,19 @@ namespace Server
             Console.WriteLine("New user " + username  + " with url " + clientUrl + " registered.");
         }
 
-		static void Main(string[] args) {
+        public List<MeetingProposal> List()
+        {
+            Console.WriteLine("Listed meeting proposals.");
+            return currentMeetingProposals;
+        }
+
+        public void Create(string coordinator, string meetingTopic, int minAttendees, List<DateLocation> slots, List<string> invitees = null)
+        {
+            currentMeetingProposals.Add(new MeetingProposal(coordinator, meetingTopic, minAttendees, slots, invitees));
+            Console.WriteLine("Created new meeting proposal for " + meetingTopic + ".");
+        }
+
+        static void Main(string[] args) {
 
             const int SERVER_PORT = 8086;
 

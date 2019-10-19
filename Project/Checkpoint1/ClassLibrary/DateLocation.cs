@@ -9,6 +9,7 @@ namespace ClassLibrary
     {
         private String date;
         private Location location ;
+
         public DateLocation(string dateLocation)
         {
 

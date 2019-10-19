@@ -35,6 +35,9 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Runtime.Remoting" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -44,7 +47,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ClientAPI.cs" />
-    <Compile Include="Program.cs" />
+    <Compile Include="CClient.cs" />
+    <Compile Include="SchedulingForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SchedulingForm.Designer.cs">
+      <DependentUpon>SchedulingForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -55,6 +64,11 @@
       <Project>{ddfd7b0b-aec6-4ed4-bdd4-8ce212d28158}</Project>
       <Name>ClassLibrary</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="SchedulingForm.resx">
+      <DependentUpon>SchedulingForm.cs</DependentUpon>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
