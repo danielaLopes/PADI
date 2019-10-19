@@ -1,0 +1,9 @@
+C:\Users\franc\Source\Repos\Chat\bin\Debug\Chat.exe.config
+C:\Users\franc\Source\Repos\Chat\bin\Debug\Chat.exe
+C:\Users\franc\Source\Repos\Chat\bin\Debug\Chat.pdb
+C:\Users\franc\Source\Repos\Chat\obj\Debug\Chat.csprojAssemblyReference.cache
+C:\Users\franc\Source\Repos\Chat\obj\Debug\Chat.Form1.resources
+C:\Users\franc\Source\Repos\Chat\obj\Debug\Chat.Properties.Resources.resources
+C:\Users\franc\Source\Repos\Chat\obj\Debug\Chat.csproj.GenerateResource.cache
+C:\Users\franc\Source\Repos\Chat\obj\Debug\Chat.exe
+C:\Users\franc\Source\Repos\Chat\obj\Debug\Chat.pdb

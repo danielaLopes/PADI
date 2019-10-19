@@ -1,0 +1,6 @@
+C:\Users\franc\Source\Repos\Chat\CommonLibrary\obj\Debug\CommonLibrary.csprojAssemblyReference.cache
+C:\Users\franc\Source\Repos\Chat\CommonLibrary\bin\Debug\CommonLibrary.exe.config
+C:\Users\franc\Source\Repos\Chat\CommonLibrary\bin\Debug\CommonLibrary.exe
+C:\Users\franc\Source\Repos\Chat\CommonLibrary\bin\Debug\CommonLibrary.pdb
+C:\Users\franc\Source\Repos\Chat\CommonLibrary\obj\Debug\CommonLibrary.exe
+C:\Users\franc\Source\Repos\Chat\CommonLibrary\obj\Debug\CommonLibrary.pdb

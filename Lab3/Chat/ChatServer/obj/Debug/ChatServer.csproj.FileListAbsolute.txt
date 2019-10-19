@@ -1,0 +1,12 @@
+C:\Users\franc\Source\Repos\Chat\ChatServer1\bin\Debug\ChatServer1.exe.config
+C:\Users\franc\Source\Repos\Chat\ChatServer1\bin\Debug\ChatServer1.exe
+C:\Users\franc\Source\Repos\Chat\ChatServer1\bin\Debug\ChatServer1.pdb
+C:\Users\franc\Source\Repos\Chat\ChatServer1\obj\Debug\ChatServer.csprojAssemblyReference.cache
+C:\Users\franc\Source\Repos\Chat\ChatServer1\obj\Debug\ChatServer1.Properties.Resources.resources
+C:\Users\franc\Source\Repos\Chat\ChatServer1\obj\Debug\ChatServer.csproj.GenerateResource.cache
+C:\Users\franc\Source\Repos\Chat\ChatServer1\obj\Debug\ChatServer1.exe
+C:\Users\franc\Source\Repos\Chat\ChatServer1\obj\Debug\ChatServer1.pdb
+C:\Users\franc\Source\Repos\Chat\ChatServer1\bin\Debug\CommonLibrary.exe
+C:\Users\franc\Source\Repos\Chat\ChatServer1\bin\Debug\CommonLibrary.pdb
+C:\Users\franc\Source\Repos\Chat\ChatServer1\bin\Debug\CommonLibrary.exe.config
+C:\Users\franc\Source\Repos\Chat\ChatServer1\obj\Debug\ChatServer.csproj.CopyComplete
