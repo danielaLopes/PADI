@@ -17,19 +17,23 @@ namespace Client
         // obtain server remote object
         private IServer remoteServer;
 
-        private string username;
+        private readonly string USERNAME;
+        private readonly string CLIENT_URL;
 
         public CClient(string username, int port)
         {
             TcpChannel clientChannel = new TcpChannel(port);
             ChannelServices.RegisterChannel(clientChannel, false);
 
-            this.username = username;
+            USERNAME = username;
+            CLIENT_URL = "tcp://localhost:" + port + "/" + username;
 
-            // creates the server's remote object
+            // create the server's remote object
             RemotingServices.Marshal(this, username, typeof(CClient));
             // retrieve server's proxy
             remoteServer = (IServer)Activator.GetObject(typeof(IServer), SERVER_URL);
+            // register new user in remote server
+            remoteServer.RegisterUser(username, CLIENT_URL);
         }
 
         /*public void ListCommands()
@@ -46,7 +50,7 @@ namespace Client
 
         public void Create(string meetingTopic, int minAttendees, List<DateLocation> slots, List<string> invitees = null)
         {
-            remoteServer.Create(username, meetingTopic, minAttendees, slots, invitees);
+            remoteServer.Create(USERNAME, meetingTopic, minAttendees, slots, invitees);
         }
 
         public void Join(string meetingTopic)
@@ -69,7 +73,7 @@ namespace Client
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new Form());
+            Application.Run(new SchedulingForm());
 
             /*while()
             {

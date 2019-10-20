@@ -20,11 +20,13 @@ namespace Client
 
         private void connectButton_Click(object sender, EventArgs e)
         {
+            Console.WriteLine(Int32.Parse(port.Text));
             client = new CClient(username.Text, Int32.Parse(port.Text));
 
-            // clears textboxes
-            username.Text = "";
-            port.Text = "";
+            // disable users from registering more than once on the same client app
+            username.ReadOnly = true;
+            port.ReadOnly = true;
+            connectButton.Enabled = false;
         }
 
         private void listButton_Click(object sender, EventArgs e)
