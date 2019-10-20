@@ -16,6 +16,6 @@ namespace ClassLibrary
 
         List<MeetingProposal> List();
 
-        void Create(string coordinator, string meetingTopic, int minAttendees, List<DateLocation> slots, List<string> invitees = null);
+        void Create(string coordinator, string meetingTopic, int minAttendees, string slots, string invitees = null);
     }
 }

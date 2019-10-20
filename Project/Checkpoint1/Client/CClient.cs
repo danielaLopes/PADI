@@ -48,7 +48,7 @@ namespace Client
             //TODO update textbox
         }
 
-        public void Create(string meetingTopic, int minAttendees, List<DateLocation> slots, List<string> invitees = null)
+        public void Create(string meetingTopic, int minAttendees, string slots, string invitees = null)
         {
             remoteServer.Create(USERNAME, meetingTopic, minAttendees, slots, invitees);
         }

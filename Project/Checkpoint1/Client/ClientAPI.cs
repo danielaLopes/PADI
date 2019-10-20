@@ -21,7 +21,7 @@ namespace Client
         /// <param name="minAttendees">minimum number of attendees required</param>
         /// <param name="slots">set of possible dates and locations</param>
         /// <param name="invitees">optional group of invite users</param>
-        void Create(string meetingTopic, int minAttendees, List<DateLocation> slots, List<string> invitees = null);
+        void Create(string meetingTopic, int minAttendees, string slots, string invitees = null);
 
         /// <summary>
         /// Joins an existing meeting.

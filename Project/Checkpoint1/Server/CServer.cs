@@ -3,6 +3,7 @@ using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
 using System.Collections.Generic;
+using System.Linq;
 using ClassLibrary;
 
 namespace Server
@@ -50,10 +51,24 @@ namespace Server
             return currentMeetingProposals;
         }
 
-        public void Create(string coordinator, string meetingTopic, int minAttendees, List<DateLocation> slots, List<string> invitees = null)
+        public void Create(string coordinator, string meetingTopic, int minAttendees, string slots, string invitees = null)
         {
-            currentMeetingProposals.Add(new MeetingProposal(coordinator, meetingTopic, minAttendees, slots, invitees));
+            currentMeetingProposals.Add(new MeetingProposal(coordinator, meetingTopic, minAttendees, ParseSlots(slots), ParseInvitees(invitees)));
             Console.WriteLine("Created new meeting proposal for " + meetingTopic + ".");
+        }
+
+        // slots -> “Lisboa,2019-11-14, Porto,2020-02-03” ??
+        public List<DateLocation> ParseSlots(string slots)
+        {
+            List<DataLocation> parsedSlots = new List<DataLocation>();
+            slots.Split(',').ToList();
+            for
+        }
+
+        // invitees -> "Maria", "Miguel"
+        public List<string> ParseInvitees(string invitees)
+        {
+            return invitees.Split(',').ToList();
         }
 
         static void Main(string[] args) {

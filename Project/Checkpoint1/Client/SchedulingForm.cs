@@ -33,5 +33,10 @@ namespace Client
         {
             client.List();
         }
+
+        private void createButton_Click(object sender, EventArgs e)
+        {
+            client.Create(topic.Text, Int32.Parse(minAttendees.Text), slots.Text, attendees.Text);
+        }
     }
 }
