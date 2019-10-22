@@ -86,12 +86,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="MeetingProposal.cs" />
     <Compile Include="DateLocation.cs" />
     <Compile Include="IServer.cs" />
     <Compile Include="IClient.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Meeting.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

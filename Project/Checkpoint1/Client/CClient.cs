@@ -10,7 +10,7 @@ using ClassLibrary;
 
 namespace Client
 {
-    class CClient : MarshalByRefObject, ClientAPI
+    public class CClient : MarshalByRefObject, ClientAPI
     {
         //TODO make this for several replicated servers
         private const string SERVER_URL = "tcp://localhost:8086/server-1";
@@ -43,9 +43,10 @@ namespace Client
 
         public void List()
         {
-            List<MeetingProposal> proposals = remoteServer.List();
+            string proposals = remoteServer.List();
 
-            //TODO update textbox
+            Console.WriteLine(proposals);
+            //TODO update textbox with multithreads!
         }
 
         public void Create(string meetingTopic, int minAttendees, string slots, string invitees = null)
@@ -71,9 +72,11 @@ namespace Client
         [STAThread]
         static void Main(string[] args)
         {
+            CClient client= new CClient("Maria", 8090);
+
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new SchedulingForm());
+            Application.Run(new SchedulingForm(client));
 
             /*while()
             {

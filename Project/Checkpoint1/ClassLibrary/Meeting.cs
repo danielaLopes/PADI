@@ -28,10 +28,15 @@ namespace ClassLibrary
         {
             records.Add(record);
         }
+        // TODO : e preciiso imprimir mais coisas????
         public override string ToString()
         {
-            //TODO
-            return null;
+            string slots = "";
+            foreach (DateLocation dateLocation in dateLocationSlots)
+            {
+                slots += dateLocation.ToString();
+            }
+            return topic + "," + minParticipants + "," + slots;
         }
     }
 
@@ -39,6 +44,11 @@ namespace ClassLibrary
     {
         private string name;
         private List<DateLocation> dateLocationSlots;
+
+        public override string ToString()
+        {
+            return name + "," + dateLocationSlots;
+        }
     }
 }
  

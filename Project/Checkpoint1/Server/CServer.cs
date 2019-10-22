@@ -31,6 +31,7 @@ namespace Server
             RemotingServices.Marshal(this, SERVER_NAME, typeof(CServer));
 
             users = new List<User>();
+            currentMeetingProposals = new List<MeetingProposal>();
 
             //_updateMessagesDelegate = new UpdateMessagesDelegate(UpdateMessages);
             //_updateMessagesCallback = new AsyncCallback(UpdateMessagesCallback);
@@ -45,10 +46,15 @@ namespace Server
             Console.WriteLine("New user " + username  + " with url " + clientUrl + " registered.");
         }
 
-        public List<MeetingProposal> List()
+        public string List()
         {
+            string proposals = "";
+            foreach(MeetingProposal proposal in currentMeetingProposals)
+            {
+                proposals += proposal.ToString();
+            }
             Console.WriteLine("Listed meeting proposals.");
-            return currentMeetingProposals;
+            return proposals;
         }
 
         public void Create(string coordinator, string meetingTopic, int minAttendees, string slots, string invitees = null)
@@ -61,7 +67,7 @@ namespace Server
         public List<DateLocation> ParseSlots(string slots)
         {
             List<DateLocation> parsedSlots = new List<DateLocation>();
-            List<string> splitSlots = slots.Split(' ').ToList();
+            List<string> splitSlots = slots.Split(',').ToList();
             for(int i = 0; i < splitSlots.Count - 1; i += 2)
             {
                 parsedSlots.Add(new DateLocation(splitSlots[i], splitSlots[i + 1]));
