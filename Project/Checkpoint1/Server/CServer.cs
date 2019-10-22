@@ -57,18 +57,20 @@ namespace Server
             Console.WriteLine("Created new meeting proposal for " + meetingTopic + ".");
         }
 
-        // slots -> “Lisboa,2019-11-14, Porto,2020-02-03” ??
+        // slots -> Lisboa,2019-11-14 Porto,2020-02-03
         public List<DateLocation> ParseSlots(string slots)
         {
             List<DateLocation> parsedSlots = new List<DateLocation>();
-            List<string> splitSlots = slots.Split(',').ToList();
-            for(int i = 0; i < splitSlots.Count; i++)
+            List<string> splitSlots = slots.Split(' ').ToList();
+            for(int i = 0; i < splitSlots.Count - 1; i += 2)
             {
-
+                parsedSlots.Add(new DateLocation(splitSlots[i], splitSlots[i + 1]));
             }
+
+            return parsedSlots;
         }
 
-        // invitees -> "Maria", "Miguel"
+        // invitees -> Maria, Miguel
         public List<string> ParseInvitees(string invitees)
         {
             return invitees.Split(',').ToList();

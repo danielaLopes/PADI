@@ -7,12 +7,13 @@ namespace ClassLibrary
 {
     public class DateLocation
     {
-        private String date;
-        private Location location ;
+        private string date;
+        private string locationName;
 
-        public DateLocation(string dateLocation)
+        public DateLocation(string date, string locationName)
         {
-
+            this.date = date;
+            this.locationName = locationName;
         }
     }
 

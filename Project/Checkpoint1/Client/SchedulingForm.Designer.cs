@@ -29,9 +29,6 @@
         private void InitializeComponent()
         {
             this.usernameLabel = new System.Windows.Forms.Label();
-            this.username = new System.Windows.Forms.TextBox();
-            this.port = new System.Windows.Forms.TextBox();
-            this.connectButton = new System.Windows.Forms.Button();
             this.listButton = new System.Windows.Forms.Button();
             this.createButton = new System.Windows.Forms.Button();
             this.list = new System.Windows.Forms.TextBox();
@@ -48,34 +45,6 @@
             this.usernameLabel.Name = "usernameLabel";
             this.usernameLabel.Size = new System.Drawing.Size(0, 17);
             this.usernameLabel.TabIndex = 0;
-            // 
-            // username
-            // 
-            this.username.Location = new System.Drawing.Point(28, 23);
-            this.username.Name = "username";
-            this.username.Size = new System.Drawing.Size(185, 22);
-            this.username.TabIndex = 2;
-            this.username.Text = "Username";
-            this.username.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            // 
-            // port
-            // 
-            this.port.Location = new System.Drawing.Point(28, 58);
-            this.port.Name = "port";
-            this.port.Size = new System.Drawing.Size(185, 22);
-            this.port.TabIndex = 3;
-            this.port.Text = "Port";
-            this.port.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            // 
-            // connectButton
-            // 
-            this.connectButton.Location = new System.Drawing.Point(78, 96);
-            this.connectButton.Name = "connectButton";
-            this.connectButton.Size = new System.Drawing.Size(94, 43);
-            this.connectButton.TabIndex = 4;
-            this.connectButton.Text = "Connect";
-            this.connectButton.UseVisualStyleBackColor = true;
-            this.connectButton.Click += new System.EventHandler(this.connectButton_Click);
             // 
             // listButton
             // 
@@ -156,9 +125,6 @@
             this.Controls.Add(this.list);
             this.Controls.Add(this.createButton);
             this.Controls.Add(this.listButton);
-            this.Controls.Add(this.connectButton);
-            this.Controls.Add(this.port);
-            this.Controls.Add(this.username);
             this.Controls.Add(this.usernameLabel);
             this.Name = "SchedulingForm";
             this.Text = "MSDAD - Meeting Scheduler";
@@ -170,9 +136,6 @@
         #endregion
 
         private System.Windows.Forms.Label usernameLabel;
-        private System.Windows.Forms.TextBox username;
-        private System.Windows.Forms.TextBox port;
-        private System.Windows.Forms.Button connectButton;
         private System.Windows.Forms.Button listButton;
         private System.Windows.Forms.Button createButton;
         private System.Windows.Forms.TextBox list;
