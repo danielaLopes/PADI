@@ -60,9 +60,12 @@ namespace Server
         // slots -> “Lisboa,2019-11-14, Porto,2020-02-03” ??
         public List<DateLocation> ParseSlots(string slots)
         {
-            List<DataLocation> parsedSlots = new List<DataLocation>();
-            slots.Split(',').ToList();
-            for
+            List<DateLocation> parsedSlots = new List<DateLocation>();
+            List<string> splitSlots = slots.Split(',').ToList();
+            for(int i = 0; i < splitSlots.Count; i++)
+            {
+
+            }
         }
 
         // invitees -> "Maria", "Miguel"
