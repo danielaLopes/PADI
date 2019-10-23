@@ -14,8 +14,8 @@ namespace ClassLibrary
 
         void RegisterUser(string username, string clientUrl);
 
-        string List();
+        List<MeetingProposal> List(string username);
 
-        void Create(string coordinator, string meetingTopic, int minAttendees, string slots, string invitees = null);
+        void Create(MeetingProposal proposal);
     }
 }

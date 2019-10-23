@@ -5,6 +5,7 @@ using System.Text;
 
 namespace ClassLibrary
 {
+    [Serializable]
     public class DateLocation
     {
         private string locationName;

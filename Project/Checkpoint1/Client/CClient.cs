@@ -10,12 +10,12 @@ using ClassLibrary;
 
 namespace Client
 {
-    public class CClient : MarshalByRefObject, ClientAPI
+    public class CClient : MarshalByRefObject, IClient
     {
         //TODO make this for several replicated servers
         private const string SERVER_URL = "tcp://localhost:8086/server-1";
         // obtain server remote object
-        private IServer remoteServer;
+        private IServer _remoteServer;
 
         private readonly string USERNAME;
         private readonly string CLIENT_URL;
@@ -31,9 +31,9 @@ namespace Client
             // create the server's remote object
             RemotingServices.Marshal(this, username, typeof(CClient));
             // retrieve server's proxy
-            remoteServer = (IServer)Activator.GetObject(typeof(IServer), SERVER_URL);
+            _remoteServer = (IServer)Activator.GetObject(typeof(IServer), SERVER_URL);
             // register new user in remote server
-            remoteServer.RegisterUser(username, CLIENT_URL);
+            _remoteServer.RegisterUser(username, CLIENT_URL);
         }
 
         /*public void ListCommands()
@@ -43,15 +43,40 @@ namespace Client
 
         public void List()
         {
-            string proposals = remoteServer.List();
+            List<MeetingProposal> proposals = _remoteServer.List(USERNAME);
 
-            Console.WriteLine(proposals);
+            foreach(MeetingProposal proposal in proposals)
+            {
+                Console.WriteLine(proposal);
+            }
+            
             //TODO update textbox with multithreads!
         }
 
         public void Create(string meetingTopic, int minAttendees, string slots, string invitees = null)
         {
-            remoteServer.Create(USERNAME, meetingTopic, minAttendees, slots, invitees);
+            List<DateLocation> parsedSlots = ParseSlots(slots);
+            List<string> parsedInvitees = ParseInvitees(invitees);
+            MeetingProposal proposal = new MeetingProposal {
+                Coordinator = USERNAME,
+                Topic = meetingTopic,
+                MinAttendees = minAttendees,
+                DateLocationSlots = parsedSlots,
+                Invitees = parsedInvitees,
+                Records = new List<MeetingRecord>()
+            };
+            _remoteServer.Create(proposal);
+
+            // TODO
+            if (invitees != null)
+            {
+                // send to all invitees
+            }
+            else
+            {
+                // send to every client
+            }
+
         }
 
         public void Join(string meetingTopic)
@@ -67,6 +92,28 @@ namespace Client
         public void Wait(int milliseconds)
         {
 
+        }
+
+        // slots -> Lisboa,2019-11-14 Porto,2020-02-03
+        public List<DateLocation> ParseSlots(string slots)
+        {
+            List<DateLocation> parsedSlots = new List<DateLocation>();
+            // each slot is separated by a space
+            List<string> splitSlots = slots.Split(' ').ToList();
+            foreach (string slot in splitSlots)
+            {
+                // local and date are separated by a comma
+                List<string> slotDetail = slot.Split(',').ToList();
+                parsedSlots.Add(new DateLocation(slotDetail[0], slotDetail[1]));
+            }
+
+            return parsedSlots;
+        }
+
+        // invitees -> Maria, Miguel
+        public List<string> ParseInvitees(string invitees)
+        {
+            return invitees.Split(',').ToList();
         }
 
         [STAThread]

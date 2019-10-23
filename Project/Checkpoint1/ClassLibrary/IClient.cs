@@ -2,13 +2,17 @@ using System;
 
 namespace ClassLibrary
 {
-    /// <summary>
-    /// Hides Server implementation from client. Interface to be implemented by
-    /// the client to pass a Remote Object.
-    /// </summary>
+
     public interface IClient
     {
+        void List();
 
-        void UpdateMessages(string nickname, string message);
+        void Create(string meetingTopic, int minAttendees, string slots, string invitees = null);
+
+        void Join(string meetingTopic);
+
+        void Close(string meetingTopic);
+
+        void Wait(int milliseconds);
     }
 }

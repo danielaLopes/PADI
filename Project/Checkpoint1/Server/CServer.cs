@@ -12,8 +12,8 @@ namespace Server
 
     public class CServer : MarshalByRefObject, IServer
     {     
-        private List<User> users;
-        private List<MeetingProposal> currentMeetingProposals;
+        private List<User> _users;
+        private List<MeetingProposal> _currentMeetingProposals;
 
         // to send messages to clients asynchhronously, otherwise the loop would deadlock
         //public UpdateMessagesDelegate _updateMessagesDelegate;
@@ -30,8 +30,8 @@ namespace Server
             // creates the server's remote object
             RemotingServices.Marshal(this, SERVER_NAME, typeof(CServer));
 
-            users = new List<User>();
-            currentMeetingProposals = new List<MeetingProposal>();
+            _users = new List<User>();
+            _currentMeetingProposals = new List<MeetingProposal>();
 
             //_updateMessagesDelegate = new UpdateMessagesDelegate(UpdateMessages);
             //_updateMessagesCallback = new AsyncCallback(UpdateMessagesCallback);
@@ -41,45 +41,29 @@ namespace Server
         {
             // obtain client remote object
             IClient remoteClient = (IClient)Activator.GetObject(typeof(IClient), clientUrl);
-            users.Add(new User(remoteClient, username));
+            _users.Add(new User(remoteClient, username));
 
             Console.WriteLine("New user " + username  + " with url " + clientUrl + " registered.");
         }
 
-        public string List()
+        public List<MeetingProposal> List(string username)
         {
-            string proposals = "";
-            foreach(MeetingProposal proposal in currentMeetingProposals)
+            List<MeetingProposal> userProposals = new List<MeetingProposal>();
+            foreach(MeetingProposal proposal in _currentMeetingProposals)
             {
-                proposals += proposal.ToString();
-            }
-            Console.WriteLine("Listed meeting proposals.");
-            return proposals;
-        }
-
-        public void Create(string coordinator, string meetingTopic, int minAttendees, string slots, string invitees = null)
-        {
-            currentMeetingProposals.Add(new MeetingProposal(coordinator, meetingTopic, minAttendees, ParseSlots(slots), ParseInvitees(invitees)));
-            Console.WriteLine("Created new meeting proposal for " + meetingTopic + ".");
-        }
-
-        // slots -> Lisboa,2019-11-14 Porto,2020-02-03
-        public List<DateLocation> ParseSlots(string slots)
-        {
-            List<DateLocation> parsedSlots = new List<DateLocation>();
-            List<string> splitSlots = slots.Split(',').ToList();
-            for(int i = 0; i < splitSlots.Count - 1; i += 2)
-            {
-                parsedSlots.Add(new DateLocation(splitSlots[i], splitSlots[i + 1]));
+                if (proposal.Coordinator.Equals(username) || proposal.Invitees.Contains(username))
+                {
+                    userProposals.Add(proposal);
+                }   
             }
 
-            return parsedSlots;
+            return userProposals;
         }
 
-        // invitees -> Maria, Miguel
-        public List<string> ParseInvitees(string invitees)
+        public void Create(MeetingProposal proposal)
         {
-            return invitees.Split(',').ToList();
+            _currentMeetingProposals.Add(proposal);
+            Console.WriteLine("Created new meeting proposal for " + proposal.Topic + ".");
         }
 
         static void Main(string[] args) {
