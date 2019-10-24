@@ -41,7 +41,7 @@ namespace ClassLibrary
             {
                 roomList += room;
             }
-            return name + ", " + roomList;
+            return name + " " + roomList;
         }
     }
 

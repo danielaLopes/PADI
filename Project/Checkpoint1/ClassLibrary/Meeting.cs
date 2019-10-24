@@ -27,7 +27,7 @@ namespace ClassLibrary
             {
                 slots += dateLocation.ToString() + " ";
             }
-            return Topic + "," + MinAttendees + "," + slots;
+            return Topic + " " + MinAttendees + " " + slots;
         }
     }
 
@@ -39,7 +39,7 @@ namespace ClassLibrary
 
         public override string ToString()
         {
-            return Name + "," + DateLocationSlots;
+            return Name + " " + DateLocationSlots;
         }
 
         

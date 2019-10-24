@@ -32,7 +32,6 @@ namespace Client
 
                 int nInvitees = Int32.Parse(fields[4]);
                 int lowerInviteesBound = upperSlotBound;
-                int upperInviteesBound = lowerInviteesBound + nInvitees;
 
                 Console.WriteLine(fields.GetRange(lowerSlotBound, nSlots)[0]);
                 Console.WriteLine(fields.GetRange(lowerSlotBound, nSlots)[1]);
@@ -80,7 +79,7 @@ namespace Client
 
         static void Main(string[] args)
         {
-            CClient client = new CClient("Maria", 8090);
+            CClient client = new CClient(args[0], Int32.Parse(args[1]));
             string path = "C:../../commands.txt";
             ScriptClient scriptClient = new ScriptClient(client);
 
@@ -90,24 +89,6 @@ namespace Client
             {
                 scriptClient.ReceiveCommand(line);
             }
-
-            /*while()
-            {
-                int caseSwitch = 1;
-
-                switch (caseSwitch)
-                {
-                    case 1:
-                        Console.WriteLine("Case 1");
-                        break;
-                    case 2:
-                        Console.WriteLine("Case 2");
-                        break;
-                    default:
-                        Console.WriteLine("Default case");
-                        break;
-                }
-            }*/
 
             System.Console.WriteLine("<enter> para sair...");
             System.Console.ReadLine();
