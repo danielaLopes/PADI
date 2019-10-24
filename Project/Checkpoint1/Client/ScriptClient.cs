@@ -81,7 +81,7 @@ namespace Client
         static void Main(string[] args)
         {
             CClient client = new CClient("Maria", 8090);
-            string path = "C:/Users/user/OneDrive/Documents/Mestrado/PADI/PADI/Project/Checkpoint1/Client/commands.txt";
+            string path = "C:../../commands.txt";
             ScriptClient scriptClient = new ScriptClient(client);
 
             string[] lines = System.IO.File.ReadAllLines(@path);
