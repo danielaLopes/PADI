@@ -27,18 +27,21 @@ namespace Client
             else if (fields[0].Equals("create"))
             {
                 int nSlots = Int32.Parse(fields[3]);
-                int lowerSlotBound = 3;
+                int lowerSlotBound = 5;
                 int upperSlotBound = lowerSlotBound + nSlots;
 
-                int nInvitees = Int32.Parse(fields[3]);
-                int lowerInviteesBound = upperSlotBound + 1;
+                int nInvitees = Int32.Parse(fields[4]);
+                int lowerInviteesBound = upperSlotBound;
                 int upperInviteesBound = lowerInviteesBound + nInvitees;
 
-                _client.Create(fields[1], fields[2], fields.GetRange(lowerSlotBound, upperSlotBound), fields.GetRange(lowerInviteesBound, upperInviteesBound));
+                Console.WriteLine(fields.GetRange(lowerSlotBound, nSlots)[0]);
+                Console.WriteLine(fields.GetRange(lowerSlotBound, nSlots)[1]);
+
+                _client.Create(fields[1], fields[2], fields.GetRange(lowerSlotBound, nSlots), fields.GetRange(lowerInviteesBound, nInvitees));
             }
             else if (fields[0].Equals("join"))
             {
-                _client.Join(fields[1], fields.GetRange(2, fields.Count - 1));
+                _client.Join(fields[1], fields.GetRange(2, fields.Count - 2));
             }
             else if (fields[0].Equals("close"))
             {
@@ -78,8 +81,15 @@ namespace Client
         static void Main(string[] args)
         {
             CClient client = new CClient("Maria", 8090);
-            string path = "commands.txt";
+            string path = "C:/Users/user/OneDrive/Documents/Mestrado/PADI/PADI/Project/Checkpoint1/Client/commands.txt";
             ScriptClient scriptClient = new ScriptClient(client);
+
+            string[] lines = System.IO.File.ReadAllLines(@path);
+
+            foreach (string line in lines)
+            {
+                scriptClient.ReceiveCommand(line);
+            }
 
             /*while()
             {

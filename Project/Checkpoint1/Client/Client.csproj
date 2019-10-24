@@ -49,12 +49,6 @@
     <Compile Include="ScriptClient.cs" />
     <Compile Include="ClientAPI.cs" />
     <Compile Include="CClient.cs" />
-    <Compile Include="SchedulingForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="SchedulingForm.Designer.cs">
-      <DependentUpon>SchedulingForm.cs</DependentUpon>
-    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -65,11 +59,6 @@
       <Project>{ddfd7b0b-aec6-4ed4-bdd4-8ce212d28158}</Project>
       <Name>ClassLibrary</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="SchedulingForm.resx">
-      <DependentUpon>SchedulingForm.cs</DependentUpon>
-    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

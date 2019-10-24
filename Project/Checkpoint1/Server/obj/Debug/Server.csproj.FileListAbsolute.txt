@@ -14,3 +14,11 @@ C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\PADI\Project\Checkpo
 C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\PADI\Project\Checkpoint1\Server\obj\Debug\Server.csproj.CopyComplete
 C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\PADI\Project\Checkpoint1\Server\obj\Debug\Server.exe
 C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\PADI\Project\Checkpoint1\Server\obj\Debug\Server.pdb
+C:\Users\user\OneDrive\Documents\Mestrado\PADI\PADI\Project\Checkpoint1\Server\bin\Debug\Server.exe
+C:\Users\user\OneDrive\Documents\Mestrado\PADI\PADI\Project\Checkpoint1\Server\bin\Debug\Server.pdb
+C:\Users\user\OneDrive\Documents\Mestrado\PADI\PADI\Project\Checkpoint1\Server\bin\Debug\CommonTypes.dll
+C:\Users\user\OneDrive\Documents\Mestrado\PADI\PADI\Project\Checkpoint1\Server\bin\Debug\CommonTypes.pdb
+C:\Users\user\OneDrive\Documents\Mestrado\PADI\PADI\Project\Checkpoint1\Server\obj\Debug\Server.csprojAssemblyReference.cache
+C:\Users\user\OneDrive\Documents\Mestrado\PADI\PADI\Project\Checkpoint1\Server\obj\Debug\Server.csproj.CopyComplete
+C:\Users\user\OneDrive\Documents\Mestrado\PADI\PADI\Project\Checkpoint1\Server\obj\Debug\Server.exe
+C:\Users\user\OneDrive\Documents\Mestrado\PADI\PADI\Project\Checkpoint1\Server\obj\Debug\Server.pdb

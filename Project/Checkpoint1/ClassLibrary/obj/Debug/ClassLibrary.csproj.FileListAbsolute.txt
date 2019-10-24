@@ -8,3 +8,8 @@ C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\PADI\Project\Checkpo
 C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\PADI\Project\Checkpoint1\ClassLibrary\obj\Debug\ClassLibrary.csprojAssemblyReference.cache
 C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\PADI\Project\Checkpoint1\ClassLibrary\obj\Debug\CommonTypes.dll
 C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\PADI\Project\Checkpoint1\ClassLibrary\obj\Debug\CommonTypes.pdb
+C:\Users\user\OneDrive\Documents\Mestrado\PADI\PADI\Project\Checkpoint1\ClassLibrary\bin\Debug\CommonTypes.dll
+C:\Users\user\OneDrive\Documents\Mestrado\PADI\PADI\Project\Checkpoint1\ClassLibrary\bin\Debug\CommonTypes.pdb
+C:\Users\user\OneDrive\Documents\Mestrado\PADI\PADI\Project\Checkpoint1\ClassLibrary\obj\Debug\ClassLibrary.csprojAssemblyReference.cache
+C:\Users\user\OneDrive\Documents\Mestrado\PADI\PADI\Project\Checkpoint1\ClassLibrary\obj\Debug\CommonTypes.dll
+C:\Users\user\OneDrive\Documents\Mestrado\PADI\PADI\Project\Checkpoint1\ClassLibrary\obj\Debug\CommonTypes.pdb
