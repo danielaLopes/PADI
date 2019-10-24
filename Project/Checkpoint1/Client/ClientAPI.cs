@@ -27,7 +27,8 @@ namespace Client
         /// Joins an existing meeting.
         /// </summary>
         /// <param name="meetingTopic"></param>
-        void Join(string meetingTopic);
+        /// <param name="slots"></param>
+        void Join(string meetingTopic, List<DateLocation> slots);
 
         /// <summary>
         /// Closes a meeting

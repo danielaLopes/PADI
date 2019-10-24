@@ -46,6 +46,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ScriptClient.cs" />
     <Compile Include="ClientAPI.cs" />
     <Compile Include="CClient.cs" />
     <Compile Include="SchedulingForm.cs">

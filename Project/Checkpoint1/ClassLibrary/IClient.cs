@@ -7,12 +7,12 @@ namespace ClassLibrary
     {
         void List();
 
-        void Create(string meetingTopic, int minAttendees, string slots, string invitees = null);
+        void Create(string meetingTopic, string minAttendees, string slots, string invitees = null);
 
         void Join(string meetingTopic);
 
         void Close(string meetingTopic);
 
-        void Wait(int milliseconds);
+        void Wait(string milliseconds);
     }
 }

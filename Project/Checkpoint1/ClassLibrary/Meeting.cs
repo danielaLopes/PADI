@@ -25,7 +25,7 @@ namespace ClassLibrary
             string slots = "";
             foreach (DateLocation dateLocation in DateLocationSlots)
             {
-                slots += dateLocation.ToString() + "";
+                slots += dateLocation.ToString() + " ";
             }
             return Topic + "," + MinAttendees + "," + slots;
         }

@@ -53,14 +53,14 @@ namespace Client
             //TODO update textbox with multithreads!
         }
 
-        public void Create(string meetingTopic, int minAttendees, string slots, string invitees = null)
+        public void Create(string meetingTopic, string minAttendees, List<string> slots, List<string> invitees = null)
         {
             List<DateLocation> parsedSlots = ParseSlots(slots);
-            List<string> parsedInvitees = ParseInvitees(invitees);
+            List<string> parsedInvitees = invitees;
             MeetingProposal proposal = new MeetingProposal {
                 Coordinator = USERNAME,
                 Topic = meetingTopic,
-                MinAttendees = minAttendees,
+                MinAttendees = Int32.Parse(minAttendees),
                 DateLocationSlots = parsedSlots,
                 Invitees = parsedInvitees,
                 Records = new List<MeetingRecord>()
@@ -79,7 +79,7 @@ namespace Client
 
         }
 
-        public void Join(string meetingTopic)
+        public void Join(string meetingTopic, List<string> slots)
         {
 
         }
@@ -89,18 +89,16 @@ namespace Client
 
         }
 
-        public void Wait(int milliseconds)
+        public void Wait(string milliseconds)
         {
 
         }
 
         // slots -> Lisboa,2019-11-14 Porto,2020-02-03
-        public List<DateLocation> ParseSlots(string slots)
+        public List<DateLocation> ParseSlots(List<string> slots)
         {
             List<DateLocation> parsedSlots = new List<DateLocation>();
-            // each slot is separated by a space
-            List<string> splitSlots = slots.Split(' ').ToList();
-            foreach (string slot in splitSlots)
+            foreach (string slot in slots)
             {
                 // local and date are separated by a comma
                 List<string> slotDetail = slot.Split(',').ToList();
@@ -108,43 +106,6 @@ namespace Client
             }
 
             return parsedSlots;
-        }
-
-        // invitees -> Maria, Miguel
-        public List<string> ParseInvitees(string invitees)
-        {
-            return invitees.Split(',').ToList();
-        }
-
-        [STAThread]
-        static void Main(string[] args)
-        {
-            CClient client= new CClient("Maria", 8090);
-
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new SchedulingForm(client));
-
-            /*while()
-            {
-                int caseSwitch = 1;
-
-                switch (caseSwitch)
-                {
-                    case 1:
-                        Console.WriteLine("Case 1");
-                        break;
-                    case 2:
-                        Console.WriteLine("Case 2");
-                        break;
-                    default:
-                        Console.WriteLine("Default case");
-                        break;
-                }
-            }*/
-
-            System.Console.WriteLine("<enter> para sair...");
-            System.Console.ReadLine();
         }
     }
 }
