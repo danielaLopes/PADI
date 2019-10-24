@@ -7,7 +7,8 @@ namespace PuppetMaster
     {
         static void Main(string[] args)
         {
-            Process.Start("C:../../../../Client/obj/Debug/User.exe", "Maria 8080");
+            Process.Start("C:../../../../Server/bin/Debug/Server.exe");
+            Process.Start("C:../../../../Client/bin/Debug/User.exe", "Maria 8080");
         }
     }
 }

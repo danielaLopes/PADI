@@ -5,6 +5,7 @@ using System.Runtime.Remoting.Channels.Tcp;
 using System.Collections.Generic;
 using System.Linq;
 using ClassLibrary;
+using System.Collections;
 
 namespace Server
 {
@@ -13,7 +14,8 @@ namespace Server
     public class CServer : MarshalByRefObject, IServer
     {     
         private List<User> _users;
-        private List<MeetingProposal> _currentMeetingProposals;
+
+        Hashtable _currentMeetingProposals;
 
         // to send messages to clients asynchhronously, otherwise the loop would deadlock
         //public UpdateMessagesDelegate _updateMessagesDelegate;
@@ -31,7 +33,7 @@ namespace Server
             RemotingServices.Marshal(this, SERVER_NAME, typeof(CServer));
 
             _users = new List<User>();
-            _currentMeetingProposals = new List<MeetingProposal>();
+            _currentMeetingProposals = new Hashtable();
 
             //_updateMessagesDelegate = new UpdateMessagesDelegate(UpdateMessages);
             //_updateMessagesCallback = new AsyncCallback(UpdateMessagesCallback);
@@ -49,11 +51,12 @@ namespace Server
         public List<MeetingProposal> List(string username)
         {
             List<MeetingProposal> userProposals = new List<MeetingProposal>();
-            foreach(MeetingProposal proposal in _currentMeetingProposals)
+            foreach(DictionaryEntry proposal in _currentMeetingProposals)
             {
-                if (proposal.Coordinator.Equals(username) || proposal.Invitees.Contains(username))
+                MeetingProposal meetingProposal = (MeetingProposal)proposal.Value;
+                if (meetingProposal.Coordinator.Equals(username) || meetingProposal.Invitees.Contains(username))
                 {
-                    userProposals.Add(proposal);
+                    userProposals.Add(meetingProposal);
                 }   
             }
 
@@ -62,8 +65,15 @@ namespace Server
 
         public void Create(MeetingProposal proposal)
         {
-            _currentMeetingProposals.Add(proposal);
+            _currentMeetingProposals.Add(proposal.Topic, proposal);
             Console.WriteLine("Created new meeting proposal for " + proposal.Topic + ".");
+        }
+
+        public void Join(string topic, MeetingRecord record)
+        {
+            MeetingProposal proposal = (MeetingProposal) _currentMeetingProposals[topic];
+            proposal.Records.Add(record);
+            Console.WriteLine(record.Name + " joined meeting proposal " + proposal.Topic + ".");
         }
 
         static void Main(string[] args) {

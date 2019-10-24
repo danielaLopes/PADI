@@ -34,8 +34,8 @@ namespace ClassLibrary
     [Serializable]
     public class MeetingRecord
     {
-        public string Name { get; }
-        public List<DateLocation> DateLocationSlots { get; }
+        public string Name { get; set; }
+        public List<DateLocation> DateLocationSlots { get; set; }
 
         public override string ToString()
         {

@@ -81,7 +81,13 @@ namespace Client
 
         public void Join(string meetingTopic, List<string> slots)
         {
-
+            List<DateLocation> parsedSlots = ParseSlots(slots);
+            MeetingRecord record = new MeetingRecord
+            {
+                Name = USERNAME,
+                DateLocationSlots = parsedSlots
+            };
+            _remoteServer.Join(meetingTopic, record);
         }
 
         public void Close(string meetingTopic)

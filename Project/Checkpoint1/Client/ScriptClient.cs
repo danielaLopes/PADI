@@ -33,9 +33,6 @@ namespace Client
                 int nInvitees = Int32.Parse(fields[4]);
                 int lowerInviteesBound = upperSlotBound;
 
-                Console.WriteLine(fields.GetRange(lowerSlotBound, nSlots)[0]);
-                Console.WriteLine(fields.GetRange(lowerSlotBound, nSlots)[1]);
-
                 _client.Create(fields[1], fields[2], fields.GetRange(lowerSlotBound, nSlots), fields.GetRange(lowerInviteesBound, nInvitees));
             }
             else if (fields[0].Equals("join"))
@@ -79,7 +76,7 @@ namespace Client
 
         static void Main(string[] args)
         {
-            CClient client = new CClient(args[0], Int32.Parse(args[1]));
+            CClient client = new CClient("Maria", 8080);// args[0], Int32.Parse(args[1]));
             string path = "C:../../commands.txt";
             ScriptClient scriptClient = new ScriptClient(client);
 
