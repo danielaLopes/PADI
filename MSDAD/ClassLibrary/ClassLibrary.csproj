@@ -61,6 +61,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="PortExtractor.cs" />
     <Compile Include="DateLocation.cs" />
     <Compile Include="IClient.cs" />
     <Compile Include="IServer.cs" />

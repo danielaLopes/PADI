@@ -36,13 +36,23 @@ namespace Client
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="args">
+        ///     args[0]->username
+        ///     args[1]->clientUrl
+        ///     args[2]->serverUrl
+        ///     args[3]->scriptFile
+        /// </param>
         static void Main(string[] args)
         {
-            CClient client = new CClient("Maria", 8080);// args[0], Int32.Parse(args[1]));
-            string path = "C:../../commands.txt";
+            CClient client = new CClient(args[0], args[1], args[2]);
+            //string path = "C:../../commands.txt";
+            string scriptPath = args[3];
             ScriptClient scriptClient = new ScriptClient(client);
 
-            string[] lines = System.IO.File.ReadAllLines(@path);
+            string[] lines = System.IO.File.ReadAllLines(@scriptPath);
 
             foreach (string line in lines)
             {

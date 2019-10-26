@@ -11,21 +11,24 @@ namespace Client
 {
     public class CClient : MarshalByRefObject, IClient
     {
-        //TODO make this for several replicated servers
-        private const string SERVER_URL = "tcp://localhost:8086/server-1";
-        // obtain server remote object
-        private IServer _remoteServer;
-
         private readonly string USERNAME;
         private readonly string CLIENT_URL;
 
-        public CClient(string username, int port)
+        //TODO make this for several replicated servers
+        private readonly string SERVER_URL;
+        // obtain server remote object
+        private IServer _remoteServer;
+
+        // Client username client URL server URL script file
+        public CClient(string username, string clientUrl, string serverUrl)
         {
-            TcpChannel clientChannel = new TcpChannel(port);
+            USERNAME = username;
+            CLIENT_URL = clientUrl;
+
+            TcpChannel clientChannel = new TcpChannel(PortExtractor.Extract(CLIENT_URL));
             ChannelServices.RegisterChannel(clientChannel, false);
 
-            USERNAME = username;
-            CLIENT_URL = "tcp://localhost:" + port + "/" + username;
+            SERVER_URL = serverUrl;
 
             // create the server's remote object
             RemotingServices.Marshal(this, username, typeof(CClient));
@@ -35,10 +38,6 @@ namespace Client
             _remoteServer.RegisterUser(username, CLIENT_URL);
         }
 
-        /*public void ListCommands()
-        {
-            Console.WriteLine("");
-        }*/
 
         public void List()
         {
@@ -48,8 +47,6 @@ namespace Client
             {
                 Console.WriteLine(proposal);
             }
-            
-            //TODO update textbox with multithreads!
         }
 
         public void Create(string meetingTopic, string minAttendees, List<string> slots, List<string> invitees = null)

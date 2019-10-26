@@ -15,22 +15,25 @@ namespace Server
     {     
         private List<User> _users;
 
-        Hashtable _currentMeetingProposals;
+        private Hashtable _currentMeetingProposals;
 
         // to send messages to clients asynchhronously, otherwise the loop would deadlock
         //public UpdateMessagesDelegate _updateMessagesDelegate;
         //public AsyncCallback _updateMessagesCallback;
 
+        private readonly string SERVER_ID;
         private readonly string SERVER_URL;
-        private readonly string SERVER_NAME;
 
-        public CServer(string serverName, int portNumber)
+        public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay)
         {
-            SERVER_NAME = serverName;
-            SERVER_URL = "tcp://localhost:" + portNumber + "/";
+            SERVER_ID = serverId;
+            SERVER_URL = url;
+   
+            TcpChannel serverChannel = new TcpChannel(PortExtractor.Extract(SERVER_URL));
+            ChannelServices.RegisterChannel(serverChannel, false);
 
             // creates the server's remote object
-            RemotingServices.Marshal(this, SERVER_NAME, typeof(CServer));
+            RemotingServices.Marshal(this, SERVER_ID, typeof(CServer));
 
             _users = new List<User>();
             _currentMeetingProposals = new Hashtable();
@@ -76,16 +79,19 @@ namespace Server
             Console.WriteLine(record.Name + " joined meeting proposal " + proposal.Topic + ".");
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="args">
+        ///     args[0]->serverId
+        ///     args[1]->serverUrl
+        ///     args[2]->maxFaults
+        ///     args[3]->minDelay
+        ///     args[4]->maxDelay
+        /// </param>
         static void Main(string[] args) {
 
-            const int SERVER_PORT = 8086;
-
-            // A server has to open a channel only once when the server application launches
-            TcpChannel serverChannel = new TcpChannel(SERVER_PORT);
-            ChannelServices.RegisterChannel(serverChannel, false);
-
-            // this will create the server's remote object
-            CServer server = new CServer("server-1", SERVER_PORT);
+            new CServer(args[0], args[1], Int32.Parse(args[2]), Int32.Parse(args[3]), Int32.Parse(args[4]));
             
             System.Console.WriteLine("<enter> para sair...");
 			System.Console.ReadLine();
