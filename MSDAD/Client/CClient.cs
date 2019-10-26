@@ -14,24 +14,29 @@ namespace Client
         private readonly string USERNAME;
         private readonly string CLIENT_URL;
 
-        //TODO make this for several replicated servers
+        // preferred server
         private readonly string SERVER_URL;
         // obtain server remote object
         private IServer _remoteServer;
 
-        // Client username client URL server URL script file
+        /// <summary>
+        /// Creates TCP channel, saves relevant information for remoting, registers itself as
+        /// remote object and gets preferred server's remote object.
+        /// </summary>
+        /// <param name="username"></param>
+        /// <param name="clientUrl"></param>
+        /// <param name="serverUrl"></param>
         public CClient(string username, string clientUrl, string serverUrl)
         {
             USERNAME = username;
             CLIENT_URL = clientUrl;
-
+            // creates TCP channel
             TcpChannel clientChannel = new TcpChannel(PortExtractor.Extract(CLIENT_URL));
             ChannelServices.RegisterChannel(clientChannel, false);
-
-            SERVER_URL = serverUrl;
-
-            // create the server's remote object
+            // create the client's remote object
             RemotingServices.Marshal(this, username, typeof(CClient));
+
+            SERVER_URL = serverUrl;           
             // retrieve server's proxy
             _remoteServer = (IServer)Activator.GetObject(typeof(IServer), SERVER_URL);
             // register new user in remote server
