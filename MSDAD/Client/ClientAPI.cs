@@ -7,39 +7,63 @@ using ClassLibrary;
 
 namespace Client
 {
-    interface ClientAPI
+    public class ClientAPI
     {
+        private CClient _client;
+
+        public ClientAPI(CClient client)
+        {
+            _client = client;
+        }
         /// <summary>
         /// Lists all available meetings.
         /// </summary>
-        void List();
+        public void List()
+        {
+            _client.List();
+        }
 
         /// <summary>
         /// Creates a new meeting.
         /// </summary>
-        /// <param name="meetingTopic">meeting's identifier</param>
-        /// <param name="minAttendees">minimum number of attendees required</param>
-        /// <param name="slots">set of possible dates and locations</param>
-        /// <param name="invitees">optional group of invite users</param>
-        void Create(string meetingTopic, int minAttendees, string slots, string invitees = null);
+        /// <param name="fields"></param>
+        public void Create(List<string> fields)
+        {
+            int nSlots = Int32.Parse(fields[3]);
+            int lowerSlotBound = 5;
+            int upperSlotBound = lowerSlotBound + nSlots;
+
+            int nInvitees = Int32.Parse(fields[4]);
+            int lowerInviteesBound = upperSlotBound;
+
+            _client.Create(fields[1], fields[2], fields.GetRange(lowerSlotBound, nSlots), fields.GetRange(lowerInviteesBound, nInvitees));
+        }
 
         /// <summary>
         /// Joins an existing meeting.
         /// </summary>
-        /// <param name="meetingTopic"></param>
-        /// <param name="slots"></param>
-        void Join(string meetingTopic, List<DateLocation> slots);
+        /// <param name="fields"></param>
+        public void Join(List<string> fields)
+        {
+            _client.Join(fields[1], fields.GetRange(2, fields.Count - 2));
+        }
 
         /// <summary>
         /// Closes a meeting
         /// </summary>
-        /// <param name="meetingTopic"></param>
-        void Close(string meetingTopic);
+        /// <param name="fields"></param>
+        public void Close(List<string> fields)
+        {
+            _client.Close(fields[1]);
+        }
 
         /// <summary>
         /// Delays the execution of the next command for milliseconds.
         /// </summary>
-        /// <param name="milliseconds">number of milliseconds to delay</param>
-        void Wait(int milliseconds);
+        /// <param name="fields"></param>
+        public void Wait(List<string> fields)
+        {
+            _client.Wait(fields[1]);
+        }
     }
 }
