@@ -1,8 +1,0 @@
-C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\ChatServer\obj\Debug\ChatServer.csprojAssemblyReference.cache
-C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\ChatServer\obj\Debug\Server.exe
-C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\ChatServer\obj\Debug\Server.pdb
-C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\ChatServer\bin\Debug\Server.exe
-C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\ChatServer\bin\Debug\Server.pdb
-C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\ChatServer\bin\Debug\CommonTypes.dll
-C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\ChatServer\bin\Debug\CommonTypes.pdb
-C:\Users\Tiago\Desktop\daniela\Escola\DANIELA\Mestrado\PADI\Lab3\ChatRoom\ChatServer\obj\Debug\ChatServer.csproj.CopyComplete
