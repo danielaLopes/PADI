@@ -19,7 +19,7 @@ namespace PuppetMaster
             }
             else if (fields[0].Equals("Client"))
             {
-                Client(strFields);
+                Client(strFields, fields[1], fields[2]);
             }
             else if (fields[0].Equals("AddRoom"))
             {
