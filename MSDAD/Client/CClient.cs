@@ -13,6 +13,9 @@ namespace Client
     {
         private readonly string USERNAME;
         private readonly string CLIENT_URL;
+        
+        // saves the meeting proposal the client knows about (created or received invitation)
+        private List<MeetingProposal> _knownMeetingProposals;
 
         // preferred server
         private readonly string SERVER_URL;
@@ -36,6 +39,8 @@ namespace Client
             // create the client's remote object
             RemotingServices.Marshal(this, username, typeof(CClient));
 
+            _knownMeetingProposals = new List<MeetingProposal>();
+
             SERVER_URL = serverUrl;           
             // retrieve server's proxy
             _remoteServer = (IServer)Activator.GetObject(typeof(IServer), SERVER_URL);
@@ -46,9 +51,7 @@ namespace Client
 
         public void List()
         {
-            List<MeetingProposal> proposals = _remoteServer.List(USERNAME);
-
-            foreach(MeetingProposal proposal in proposals)
+            foreach(MeetingProposal proposal in _knownMeetingProposals)
             {
                 Console.WriteLine(proposal);
             }
@@ -67,6 +70,8 @@ namespace Client
                 Records = new List<MeetingRecord>()
             };
             _remoteServer.Create(proposal);
+
+            _knownMeetingProposals.Add(proposal);
 
             // TODO
             if (invitees != null)

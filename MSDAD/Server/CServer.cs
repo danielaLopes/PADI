@@ -51,21 +51,6 @@ namespace Server
             Console.WriteLine("New user " + username  + " with url " + clientUrl + " registered.");
         }
 
-        public List<MeetingProposal> List(string username)
-        {
-            List<MeetingProposal> userProposals = new List<MeetingProposal>();
-            foreach(DictionaryEntry proposal in _currentMeetingProposals)
-            {
-                MeetingProposal meetingProposal = (MeetingProposal)proposal.Value;
-                if (meetingProposal.Coordinator.Equals(username) || meetingProposal.Invitees.Contains(username))
-                {
-                    userProposals.Add(meetingProposal);
-                }   
-            }
-
-            return userProposals;
-        }
-
         public void Create(MeetingProposal proposal)
         {
             _currentMeetingProposals.Add(proposal.Topic, proposal);
