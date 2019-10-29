@@ -41,7 +41,7 @@ namespace Client
 
             _knownMeetingProposals = new List<MeetingProposal>();
 
-            SERVER_URL = serverUrl;           
+            SERVER_URL = serverUrl;
             // retrieve server's proxy
             _remoteServer = (IServer)Activator.GetObject(typeof(IServer), SERVER_URL);
             // register new user in remote server
@@ -68,6 +68,7 @@ namespace Client
                 DateLocationSlots = parsedSlots,
                 Invitees = parsedInvitees,
                 Records = new List<MeetingRecord>()
+
             };
             _remoteServer.Create(proposal);
 

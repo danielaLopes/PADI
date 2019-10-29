@@ -38,6 +38,7 @@ namespace Server
             _users = new List<User>();
             _currentMeetingProposals = new Hashtable();
 
+            Console.WriteLine("Server created at url: {0}", SERVER_URL);
             //_updateMessagesDelegate = new UpdateMessagesDelegate(UpdateMessages);
             //_updateMessagesCallback = new AsyncCallback(UpdateMessagesCallback);
         }

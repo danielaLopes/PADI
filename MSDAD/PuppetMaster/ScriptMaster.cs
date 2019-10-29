@@ -9,9 +9,10 @@ namespace PuppetMaster
     class ScriptMaster : MasterAPI
     {
         public void ReceiveCommand(string command)
+
         {
             List<string> fields = command.Split().ToList();
-            string strFields = command.Replace(fields[0], "");
+            string strFields = command.Remove(0, fields[0].Length);
 
             if (fields[0].Equals("Server"))
             {
@@ -19,6 +20,7 @@ namespace PuppetMaster
             }
             else if (fields[0].Equals("Client"))
             {
+                Console.WriteLine(fields[2]);
                 Client(strFields, fields[1], fields[2]);
             }
             else if (fields[0].Equals("AddRoom"))
@@ -51,7 +53,7 @@ namespace PuppetMaster
         {
             ScriptMaster scriptMaster = new ScriptMaster();
 
-            string configFilePath = "C:config.txt";
+            string configFilePath = "C:../../config.txt";
 
             string[] lines = System.IO.File.ReadAllLines(@configFilePath);
 
