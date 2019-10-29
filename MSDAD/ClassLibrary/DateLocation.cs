@@ -25,23 +25,28 @@ namespace ClassLibrary
 
     public class Location
     {
-        private string name;
-        private List<Room> rooms;
+        public string Name { get; set; }
+        public List<Room> Rooms { get; set; }
 
-        // TODO : receive room list or add them one by one
-        public Location(string name, List<Room> rooms)
+        public Location(string name)
         {
-            this.name = name;
-            this.rooms = rooms;
+            Name = name;
+            Rooms = new List<Room>();
         }
+
+        public void AddRoom(Room room)
+        {
+            Rooms.Add(room);
+        }
+
         public override string ToString()
         {
             string roomList = "";
-            foreach(Room room in rooms)
+            foreach(Room room in Rooms)
             {
                 roomList += room;
             }
-            return name + " " + roomList;
+            return Name + " " + roomList;
         }
     }
 

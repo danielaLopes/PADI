@@ -10,13 +10,13 @@ namespace PuppetMaster
     {
         private Hashtable _servers;
         private Hashtable _clients;
-        private List<Location> _locations;
+        private Hashtable _locations;
 
         public MasterAPI()
         {
             _servers = new Hashtable();
             _clients = new Hashtable();
-            _locations = new List<Location>();
+            _locations = new Hashtable();
         }
 
         // Server server id URL max faults min delay max delay
@@ -35,9 +35,24 @@ namespace PuppetMaster
         }
 
         // AddRoom location capacity room name
-        public void AddRoom(string fields)
+        public void AddRoom(List<string> fields)
         {
+            string locationName = fields[1];
+            int capacity = Int32.Parse(fields[2]);
+            string roomName = fields[3];
 
+            Location location;
+            if(_locations.ContainsKey(locationName))
+            {
+                location = (Location)_locations[locationName];
+            }
+            else
+            {
+                location = new Location(locationName);
+            }
+            location.AddRoom(new Room(roomName, capacity));
+
+            Console.WriteLine(location);
         }
 
         // Status
