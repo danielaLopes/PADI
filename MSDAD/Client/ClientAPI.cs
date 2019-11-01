@@ -36,6 +36,7 @@ namespace Client
             int nInvitees = Int32.Parse(fields[4]);
             int lowerInviteesBound = upperSlotBound;
 
+            Console.WriteLine("CLIENTAPI create");
             _client.Create(fields[1], fields[2], fields.GetRange(lowerSlotBound, nSlots), fields.GetRange(lowerInviteesBound, nInvitees));
         }
 

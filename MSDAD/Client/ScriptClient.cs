@@ -20,6 +20,7 @@ namespace Client
             }
             else if (fields[0].Equals("create"))
             {
+                Console.WriteLine("SCRIPT CLIENT gonna create");
                 Create(fields);
             }
             else if (fields[0].Equals("join"))
@@ -56,6 +57,7 @@ namespace Client
 
             foreach (string line in lines)
             {
+                Console.WriteLine(line);
                 scriptClient.ReceiveCommand(line);
             }
 

@@ -13,7 +13,7 @@ namespace Server
 
     public class CServer : MarshalByRefObject, IServer
     {     
-        private List<User> _users;
+        private Hashtable _users;
 
         private Hashtable _currentMeetingProposals;
 
@@ -35,7 +35,7 @@ namespace Server
             // creates the server's remote object
             RemotingServices.Marshal(this, SERVER_ID, typeof(CServer));
 
-            _users = new List<User>();
+            _users = new Hashtable();
             _currentMeetingProposals = new Hashtable();
 
             Console.WriteLine("Server created at url: {0}", SERVER_URL);
@@ -43,19 +43,21 @@ namespace Server
             //_updateMessagesCallback = new AsyncCallback(UpdateMessagesCallback);
         }
 
-        public void RegisterUser(string username, string clientUrl)
+        public void RegisterUser(string username, string clientUrl) 
         {
             // obtain client remote object
             IClient remoteClient = (IClient)Activator.GetObject(typeof(IClient), clientUrl);
-            _users.Add(new User(remoteClient, username));
+            _users.Add(username, remoteClient);
 
             Console.WriteLine("New user " + username  + " with url " + clientUrl + " registered.");
         }
 
         public void Create(MeetingProposal proposal)
         {
+            Console.WriteLine("create");
             _currentMeetingProposals.Add(proposal.Topic, proposal);
             Console.WriteLine("Created new meeting proposal for " + proposal.Topic + ".");
+            SendInvitations(proposal);
         }
 
         public void Join(string topic, MeetingRecord record)
@@ -63,6 +65,33 @@ namespace Server
             MeetingProposal proposal = (MeetingProposal) _currentMeetingProposals[topic];
             proposal.Records.Add(record);
             Console.WriteLine(record.Name + " joined meeting proposal " + proposal.Topic + ".");
+        }
+                    
+        public void SendInvitations(MeetingProposal proposal)
+        {
+            Console.WriteLine(proposal.Invitees);
+            Console.WriteLine(proposal.Invitees.Count);
+            if (proposal.Invitees == null)
+            {
+                foreach (IClient user in _users.Values)
+                {
+                    user.ReceiveInvitation(proposal);
+                }
+            }
+            else
+            {
+                foreach (string user in proposal.Invitees)
+                {
+                    Console.WriteLine("list of invitees: {0}", user);
+
+                    foreach (string key in _users.Keys)
+                        Console.WriteLine("key: {0}", key);
+
+                    IClient invitee = (IClient)_users[user];
+                    Console.WriteLine("remote object: {0}", invitee.ToString());
+                    invitee.ReceiveInvitation(proposal);
+                }
+            }
         }
 
         /// <summary>

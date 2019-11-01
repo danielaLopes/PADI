@@ -59,14 +59,14 @@ namespace Client
 
         public void Create(string meetingTopic, string minAttendees, List<string> slots, List<string> invitees = null)
         {
+            Console.WriteLine("CCLIENT create");
             List<DateLocation> parsedSlots = ParseSlots(slots);
-            List<string> parsedInvitees = invitees;
             MeetingProposal proposal = new MeetingProposal {
                 Coordinator = USERNAME,
                 Topic = meetingTopic,
                 MinAttendees = Int32.Parse(minAttendees),
                 DateLocationSlots = parsedSlots,
-                Invitees = parsedInvitees,
+                Invitees = invitees,
                 Records = new List<MeetingRecord>()
 
             };
@@ -74,6 +74,7 @@ namespace Client
 
             _knownMeetingProposals.Add(proposal);
 
+            Console.WriteLine("cREATED MEETING PROPOSAL");
             // TODO
             if (invitees != null)
             {
@@ -105,6 +106,12 @@ namespace Client
         public void Wait(string milliseconds)
         {
 
+        }
+
+        public void ReceiveInvitation(MeetingProposal proposal)
+        {
+            _knownMeetingProposals.Add(proposal);
+            Console.WriteLine("Received proposal with topic: {0}", proposal.Topic);
         }
 
         // slots -> Lisboa,2019-11-14 Porto,2020-02-03
