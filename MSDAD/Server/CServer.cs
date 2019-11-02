@@ -10,6 +10,8 @@ using System.Collections;
 namespace Server
 {
     //public delegate void UpdateMessagesDelegate(IClient remoteClient, string nickname, string message);
+    public delegate void InvitationDelegate(IClient user, MeetingProposal proposal, string userName);
+    public delegate void InvitationCallbackDelegate();
 
     public class CServer : MarshalByRefObject, IServer
     {     
@@ -17,7 +19,10 @@ namespace Server
 
         private Hashtable _currentMeetingProposals;
 
+
         // to send messages to clients asynchhronously, otherwise the loop would deadlock
+        private InvitationDelegate _sendInvitationsDelegate;
+        private AsyncCallback _sendInvitationsCallbackDelegate;
         //public UpdateMessagesDelegate _updateMessagesDelegate;
         //public AsyncCallback _updateMessagesCallback;
 
@@ -39,6 +44,8 @@ namespace Server
             _currentMeetingProposals = new Hashtable();
 
             Console.WriteLine("Server created at url: {0}", SERVER_URL);
+            _sendInvitationsDelegate = new InvitationDelegate(SendInvitationToClient);
+            _sendInvitationsCallbackDelegate = new AsyncCallback(SendInvitationCallback);
             //_updateMessagesDelegate = new UpdateMessagesDelegate(UpdateMessages);
             //_updateMessagesCallback = new AsyncCallback(UpdateMessagesCallback);
         }
@@ -54,10 +61,10 @@ namespace Server
 
         public void Create(MeetingProposal proposal)
         {
-            Console.WriteLine("create");
             _currentMeetingProposals.Add(proposal.Topic, proposal);
+
             Console.WriteLine("Created new meeting proposal for " + proposal.Topic + ".");
-            SendInvitations(proposal);
+            SendAllInvitations(proposal);
         }
 
         public void Join(string topic, MeetingRecord record)
@@ -67,31 +74,42 @@ namespace Server
             Console.WriteLine(record.Name + " joined meeting proposal " + proposal.Topic + ".");
         }
                     
-        public void SendInvitations(MeetingProposal proposal)
+        public void SendAllInvitations(MeetingProposal proposal)
         {
-            Console.WriteLine(proposal.Invitees);
-            Console.WriteLine(proposal.Invitees.Count);
+
             if (proposal.Invitees == null)
             {
-                foreach (IClient user in _users.Values)
+                foreach (DictionaryEntry user in _users)
                 {
-                    user.ReceiveInvitation(proposal);
+                    _sendInvitationsDelegate.BeginInvoke((IClient)user.Value, proposal, (string)user.Key, SendInvitationCallback, null); 
                 }
+
             }
             else
             {
                 foreach (string user in proposal.Invitees)
                 {
-                    Console.WriteLine("list of invitees: {0}", user);
-
-                    foreach (string key in _users.Keys)
-                        Console.WriteLine("key: {0}", key);
-
-                    IClient invitee = (IClient)_users[user];
-                    Console.WriteLine("remote object: {0}", invitee.ToString());
-                    invitee.ReceiveInvitation(proposal);
+                    if (user != proposal.Coordinator)
+                    {
+                        IClient invitee = (IClient)_users[user];
+                        _sendInvitationsDelegate.BeginInvoke(invitee, proposal, user, SendInvitationCallback, null);
+                    }
                 }
+
+
             }
+        }
+
+        public void SendInvitationToClient(IClient user, MeetingProposal proposal, string username)
+        {
+            Console.WriteLine("going to send invitation to {0}", username);
+            user.ReceiveInvitation(proposal);
+        }
+
+        public void SendInvitationCallback(IAsyncResult res)
+        {
+            _sendInvitationsDelegate.EndInvoke(res);
+            Console.WriteLine("finished sending invitation");
         }
 
         /// <summary>

@@ -15,7 +15,7 @@ namespace Client
         private readonly string CLIENT_URL;
         
         // saves the meeting proposal the client knows about (created or received invitation)
-        private List<MeetingProposal> _knownMeetingProposals;
+        public List<MeetingProposal> _knownMeetingProposals;
 
         // preferred server
         private readonly string SERVER_URL;
@@ -59,7 +59,6 @@ namespace Client
 
         public void Create(string meetingTopic, string minAttendees, List<string> slots, List<string> invitees = null)
         {
-            Console.WriteLine("CCLIENT create");
             List<DateLocation> parsedSlots = ParseSlots(slots);
             MeetingProposal proposal = new MeetingProposal {
                 Coordinator = USERNAME,
@@ -74,7 +73,6 @@ namespace Client
 
             _knownMeetingProposals.Add(proposal);
 
-            Console.WriteLine("cREATED MEETING PROPOSAL");
             // TODO
             if (invitees != null)
             {
@@ -109,7 +107,7 @@ namespace Client
         }
 
         public void ReceiveInvitation(MeetingProposal proposal)
-        {
+        {    
             _knownMeetingProposals.Add(proposal);
             Console.WriteLine("Received proposal with topic: {0}", proposal.Topic);
         }
