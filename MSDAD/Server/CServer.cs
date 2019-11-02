@@ -8,7 +8,8 @@ using System.Collections;
 
 namespace Server
 {
-    //public delegate void UpdateMessagesDelegate(IClient remoteClient, string nickname, string message);
+    public delegate void InvitationDelegate(IClient user, MeetingProposal proposal, string userName);
+    public delegate void InvitationCallbackDelegate();
 
     public class CServer : MarshalByRefObject, IServer
     {     
@@ -23,6 +24,11 @@ namespace Server
 
         private Dictionary<string, IClient> _clients;
 
+        // to send messages to clients asynchronously, otherwise the loop would deadlock
+        private InvitationDelegate _sendInvitationsDelegate;
+        private AsyncCallback _sendInvitationsCallbackDelegate;
+
+
         private readonly string SERVER_ID;
         private readonly string SERVER_URL;
 
@@ -35,7 +41,7 @@ namespace Server
             ChannelServices.RegisterChannel(serverChannel, false);
 
             // creates the server's remote object
-            RemotingServices.Marshal(this, SERVER_ID, typeof(IServer));
+            RemotingServices.Marshal(this, SERVER_ID, typeof(CServer));
 
             _currentMeetingProposals = new Hashtable();
 
@@ -58,20 +64,25 @@ namespace Server
             // else : the puppet master invokes GetMasterUpdateClients method
 
             Console.WriteLine("Server created at url: {0}", SERVER_URL);
+
+            _sendInvitationsDelegate = new InvitationDelegate(SendInvitationToClient);
+            _sendInvitationsCallbackDelegate = new AsyncCallback(SendInvitationCallback);
         }
 
-        public void RegisterUser(string username, string clientUrl)
+        public void RegisterUser(string username, string clientUrl) 
         {
             // obtain client remote object
             _clients.Add(username, (IClient)Activator.GetObject(typeof(IClient), clientUrl));
 
-            Console.WriteLine("New user " + username  + " with url " + clientUrl + " registered.");
+            Console.WriteLine("New user {0} with url {0} registered.", username, clientUrl);
         }
 
         public void Create(MeetingProposal proposal)
         {
             _currentMeetingProposals.Add(proposal.Topic, proposal);
+
             Console.WriteLine("Created new meeting proposal for " + proposal.Topic + ".");
+            SendAllInvitations(proposal);
         }
 
         public void Join(string topic, MeetingRecord record)
@@ -79,6 +90,44 @@ namespace Server
             MeetingProposal proposal = (MeetingProposal) _currentMeetingProposals[topic];
             proposal.Records.Add(record);
             Console.WriteLine(record.Name + " joined meeting proposal " + proposal.Topic + ".");
+        }
+                    
+        public void SendAllInvitations(MeetingProposal proposal)
+        {
+
+            if (proposal.Invitees == null)
+            {
+                foreach (KeyValuePair<string, IClient> client in _clients)
+                {
+                    _sendInvitationsDelegate.BeginInvoke(client.Value, proposal, client.Key, SendInvitationCallback, null); 
+                }
+
+            }
+            else
+            {
+                foreach (string username in proposal.Invitees)
+                {
+                    if (username != proposal.Coordinator)
+                    {
+                        IClient invitee = _clients[username];
+                        _sendInvitationsDelegate.BeginInvoke(invitee, proposal, username, SendInvitationCallback, null);
+                    }
+                }
+
+
+            }
+        }
+
+        public void SendInvitationToClient(IClient user, MeetingProposal proposal, string username)
+        {
+            Console.WriteLine("going to send invitation to {0}", username);
+            user.ReceiveInvitation(proposal);
+        }
+
+        public void SendInvitationCallback(IAsyncResult res)
+        {
+            _sendInvitationsDelegate.EndInvoke(res);
+            Console.WriteLine("finished sending invitation");
         }
 
         public void GetMasterUpdateServers(List<string> serverUrls)

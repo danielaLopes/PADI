@@ -73,11 +73,13 @@ namespace Client
 
             foreach (string line in lines)
             {
+                Console.WriteLine(line);
                 scriptClient.ReceiveCommand(line);
             }
 
             System.Console.WriteLine("<enter> para sair...");
             System.Console.ReadLine();
+
         }
     }
 }

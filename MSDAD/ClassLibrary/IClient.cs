@@ -16,5 +16,7 @@ namespace ClassLibrary
         void Close(string meetingTopic);
 
         void Wait(string milliseconds);
+
+        void ReceiveInvitation(MeetingProposal proposal);
     }
 }

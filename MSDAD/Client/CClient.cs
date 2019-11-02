@@ -17,7 +17,7 @@ namespace Client
         private List<IClient> _clients;
         
         // saves the meeting proposal the client knows about (created or received invitation)
-        private List<MeetingProposal> _knownMeetingProposals;
+        public List<MeetingProposal> _knownMeetingProposals;
 
         // preferred server
         private readonly string SERVER_URL;
@@ -39,7 +39,9 @@ namespace Client
             TcpChannel clientChannel = new TcpChannel(PortExtractor.Extract(CLIENT_URL));
             ChannelServices.RegisterChannel(clientChannel, false);
             // create the client's remote object
-            RemotingServices.Marshal(this, username, typeof(IClient));
+            RemotingServices.Marshal(this, username, typeof(CClient));
+
+            Console.WriteLine("Client registered with username {0} with url {0}.", username, clientUrl);
 
             _clients = new List<IClient>();
 
@@ -73,13 +75,12 @@ namespace Client
         public void Create(string meetingTopic, string minAttendees, List<string> slots, List<string> invitees = null)
         {
             List<DateLocation> parsedSlots = ParseSlots(slots);
-            List<string> parsedInvitees = invitees;
             MeetingProposal proposal = new MeetingProposal {
                 Coordinator = USERNAME,
                 Topic = meetingTopic,
                 MinAttendees = Int32.Parse(minAttendees),
                 DateLocationSlots = parsedSlots,
-                Invitees = parsedInvitees,
+                Invitees = invitees,
                 Records = new List<MeetingRecord>()
 
             };
@@ -136,6 +137,12 @@ namespace Client
         public void ShutDown()
         {
 
+        }
+
+        public void ReceiveInvitation(MeetingProposal proposal)
+        {    
+            _knownMeetingProposals.Add(proposal);
+            Console.WriteLine("Received proposal with topic: {0}", proposal.Topic);
         }
 
         // slots -> Lisboa,2019-11-14 Porto,2020-02-03

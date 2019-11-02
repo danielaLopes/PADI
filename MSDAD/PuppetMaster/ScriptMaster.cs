@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using ClassLibrary;
-using Server;
 
 namespace PuppetMaster
 {
@@ -23,7 +19,6 @@ namespace PuppetMaster
             }
             else if (fields[0].Equals("Client"))
             {
-                Console.WriteLine(fields[2]);
                 Client(strFields, fields[1], fields[2]);
             }
             else if (fields[0].Equals("AddRoom"))
