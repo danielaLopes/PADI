@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using ClassLibrary;
-using System.Linq;
+using PCS;
 
 namespace PuppetMaster
 {
@@ -18,6 +18,9 @@ namespace PuppetMaster
 
     public class MasterAPI
     {
+        private const int PCS_PORT = 10000;
+        private const string PCS_NAME = "pcs";
+
         public Dictionary<string, IServer> Servers { get; set; }
         public List<string> ServerUrls { get; set; }
 
@@ -105,7 +108,9 @@ namespace PuppetMaster
         // serverId <=> location
         public void ServerSync(string fields, string serverId, string url)
         {
-            Process.Start(@"..\..\..\Server\bin\Debug\Server.exe", fields);
+            ProcessCreationService pcs = (ProcessCreationService)Activator.GetObject(typeof(ProcessCreationService), BaseUrlExtractor.Extract(url) + PCS_PORT + "/" + PCS_NAME);
+            pcs.Start(@"..\..\..\Server\bin\Debug\Server.exe", fields);
+            //Process.Start(@"..\..\..\Server\bin\Debug\Server.exe", fields);
             Servers.Add(serverId, (IServer)Activator.GetObject(typeof(IServer), url));
             ServerUrls.Add(url);
         }
@@ -113,7 +118,9 @@ namespace PuppetMaster
         // Client username client URL server URL script file
         public void ClientSync(string fields, string username, string url)
         {
-            Process.Start(@"..\..\..\Client\bin\Debug\Client.exe", fields);
+            ProcessCreationService pcs = (ProcessCreationService)Activator.GetObject(typeof(ProcessCreationService), BaseUrlExtractor.Extract(url) + PCS_PORT + "/" + PCS_NAME);
+            pcs.Start(@"..\..\..\Client\bin\Debug\Client.exe", fields);
+            //Process.Start(@"..\..\..\Client\bin\Debug\Client.exe", fields);
             Clients.Add(username, (IClient)Activator.GetObject(typeof(IClient), url));
             ClientUrls.Add(url);
         }

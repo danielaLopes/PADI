@@ -72,9 +72,9 @@ namespace PuppetMaster
         {
             ScriptMaster scriptMaster = new ScriptMaster();
 
-            string configFilePath = "C:../../config.txt";
+            //string configFilePath = "C:../../config.txt";
 
-            string[] lines = System.IO.File.ReadAllLines(@configFilePath);
+            string[] lines = System.IO.File.ReadAllLines(@args[0]);
 
             foreach (string line in lines)
             {

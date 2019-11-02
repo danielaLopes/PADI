@@ -61,6 +61,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BaseUrlExtractor.cs" />
     <Compile Include="ISystemNode.cs" />
     <Compile Include="PortExtractor.cs" />
     <Compile Include="DateLocation.cs" />
