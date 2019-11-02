@@ -1,3 +1,0 @@
-create ola 3 2 2 Lisboa,2020-01-02 Lisboa,2010-01-02 Maria Joao
-list
-join ola Lisboa,2020-01-02 Lisboa,2010-01-02

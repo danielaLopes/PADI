@@ -17,5 +17,6 @@ namespace ClassLibrary
         void Create(MeetingProposal proposal);
 
         void Join(string topic, MeetingRecord record);
+
     }
 }

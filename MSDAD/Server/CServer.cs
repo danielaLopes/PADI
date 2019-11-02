@@ -10,14 +10,19 @@ using System.Collections;
 namespace Server
 {
     //public delegate void UpdateMessagesDelegate(IClient remoteClient, string nickname, string message);
+    public delegate void InvitationDelegate(IClient user, MeetingProposal proposal, string userName);
+    public delegate void InvitationCallbackDelegate();
 
     public class CServer : MarshalByRefObject, IServer
     {     
-        private List<User> _users;
+        private Hashtable _users;
 
         private Hashtable _currentMeetingProposals;
 
+
         // to send messages to clients asynchhronously, otherwise the loop would deadlock
+        private InvitationDelegate _sendInvitationsDelegate;
+        private AsyncCallback _sendInvitationsCallbackDelegate;
         //public UpdateMessagesDelegate _updateMessagesDelegate;
         //public AsyncCallback _updateMessagesCallback;
 
@@ -35,19 +40,21 @@ namespace Server
             // creates the server's remote object
             RemotingServices.Marshal(this, SERVER_ID, typeof(CServer));
 
-            _users = new List<User>();
+            _users = new Hashtable();
             _currentMeetingProposals = new Hashtable();
 
             Console.WriteLine("Server created at url: {0}", SERVER_URL);
+            _sendInvitationsDelegate = new InvitationDelegate(SendInvitationToClient);
+            _sendInvitationsCallbackDelegate = new AsyncCallback(SendInvitationCallback);
             //_updateMessagesDelegate = new UpdateMessagesDelegate(UpdateMessages);
             //_updateMessagesCallback = new AsyncCallback(UpdateMessagesCallback);
         }
 
-        public void RegisterUser(string username, string clientUrl)
+        public void RegisterUser(string username, string clientUrl) 
         {
             // obtain client remote object
             IClient remoteClient = (IClient)Activator.GetObject(typeof(IClient), clientUrl);
-            _users.Add(new User(remoteClient, username));
+            _users.Add(username, remoteClient);
 
             Console.WriteLine("New user " + username  + " with url " + clientUrl + " registered.");
         }
@@ -55,7 +62,9 @@ namespace Server
         public void Create(MeetingProposal proposal)
         {
             _currentMeetingProposals.Add(proposal.Topic, proposal);
+
             Console.WriteLine("Created new meeting proposal for " + proposal.Topic + ".");
+            SendAllInvitations(proposal);
         }
 
         public void Join(string topic, MeetingRecord record)
@@ -63,6 +72,44 @@ namespace Server
             MeetingProposal proposal = (MeetingProposal) _currentMeetingProposals[topic];
             proposal.Records.Add(record);
             Console.WriteLine(record.Name + " joined meeting proposal " + proposal.Topic + ".");
+        }
+                    
+        public void SendAllInvitations(MeetingProposal proposal)
+        {
+
+            if (proposal.Invitees == null)
+            {
+                foreach (DictionaryEntry user in _users)
+                {
+                    _sendInvitationsDelegate.BeginInvoke((IClient)user.Value, proposal, (string)user.Key, SendInvitationCallback, null); 
+                }
+
+            }
+            else
+            {
+                foreach (string user in proposal.Invitees)
+                {
+                    if (user != proposal.Coordinator)
+                    {
+                        IClient invitee = (IClient)_users[user];
+                        _sendInvitationsDelegate.BeginInvoke(invitee, proposal, user, SendInvitationCallback, null);
+                    }
+                }
+
+
+            }
+        }
+
+        public void SendInvitationToClient(IClient user, MeetingProposal proposal, string username)
+        {
+            Console.WriteLine("going to send invitation to {0}", username);
+            user.ReceiveInvitation(proposal);
+        }
+
+        public void SendInvitationCallback(IAsyncResult res)
+        {
+            _sendInvitationsDelegate.EndInvoke(res);
+            Console.WriteLine("finished sending invitation");
         }
 
         /// <summary>
