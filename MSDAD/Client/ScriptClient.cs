@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -44,11 +45,27 @@ namespace Client
         ///     args[1]->clientUrl
         ///     args[2]->serverUrl
         ///     args[3]->scriptFile
+        ///     args[4:]->otherClientsUrl
         /// </param>
         static void Main(string[] args)
         {
-            CClient client = new CClient(args[0], args[1], args[2]);
-            //string path = "C:../../commands.txt";
+            CClient client;
+
+            // if client isn't started by PuppetMaster, use extra argument to receive other registered clients
+            if (args.Length > 4)
+            {
+                List<string> otherClientsUrl = new List<string>();
+                for (int i = 4; i < args.Length; i++)
+                {
+                    otherClientsUrl.Add(args[i]);
+                }
+                client = new CClient(args[0], args[1], args[2], otherClientsUrl);
+            }
+            else
+            {
+                client = new CClient(args[0], args[1], args[2]);
+            }
+            
             string scriptPath = args[3];
             ScriptClient scriptClient = new ScriptClient(client);
 
@@ -58,6 +75,8 @@ namespace Client
             {
                 scriptClient.ReceiveCommand(line);
             }
+
+            client.Status();
 
             System.Console.WriteLine("<enter> para sair...");
             System.Console.ReadLine();

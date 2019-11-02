@@ -3,20 +3,29 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using ClassLibrary;
+using System.Linq;
 
 namespace PuppetMaster
 {
     public class MasterAPI
     {
-        private Hashtable _servers;
-        private Hashtable _clients;
-        private Hashtable _locations;
+        public Dictionary<string, IServer> Servers { get; set; }
+        public List<string> ServerUrls { get; set; }
+
+        public Dictionary<string, IClient> Clients { get; set; }
+        public List<string> ClientUrls { get; set; }
+
+        public Dictionary<string, Location> Locations { get; set; }
 
         public MasterAPI()
         {
-            _servers = new Hashtable();
-            _clients = new Hashtable();
-            _locations = new Hashtable();
+            Servers = new Dictionary<string, IServer>();
+            ServerUrls = new List<string>();
+
+            Clients = new Dictionary<string, IClient>();
+            ClientUrls = new List<string>();
+
+            Locations = new Dictionary<string, Location>();
         }
 
         // Server server id URL max faults min delay max delay
@@ -24,14 +33,16 @@ namespace PuppetMaster
         public void Server(string fields, string serverId, string url)
         {
             Process.Start(@"..\..\..\Server\bin\Debug\Server.exe", fields);
-            _servers.Add(serverId, (IServer)Activator.GetObject(typeof(IServer), url));
+            Servers.Add(serverId, (IServer)Activator.GetObject(typeof(IServer), url));
+            ServerUrls.Add(url);
         }
 
         // Client username client URL server URL script file
         public void Client(string fields, string username, string url)
         {
             Process.Start(@"..\..\..\Client\bin\Debug\Client.exe", fields);
-            _servers.Add(username, (IServer)Activator.GetObject(typeof(IServer), url));
+            Clients.Add(username, (IClient)Activator.GetObject(typeof(IClient), url));
+            ClientUrls.Add(url);
         }
 
         // AddRoom location capacity room name
@@ -42,17 +53,16 @@ namespace PuppetMaster
             string roomName = fields[3];
 
             Location location;
-            if(_locations.ContainsKey(locationName))
+            if(Locations.ContainsKey(locationName))
             {
-                location = (Location)_locations[locationName];
+                location = (Location)Locations[locationName];
             }
             else
             {
                 location = new Location(locationName);
+                Locations.Add(locationName, location);
             }
             location.AddRoom(new Room(roomName, capacity));
-
-            Console.WriteLine(location);
         }
 
         // Status

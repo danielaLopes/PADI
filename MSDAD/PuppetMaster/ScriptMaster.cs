@@ -1,12 +1,15 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using ClassLibrary;
+using Server;
 
 namespace PuppetMaster
 {
-    class ScriptMaster : MasterAPI
+    public class ScriptMaster : MasterAPI
     {
         public void ReceiveCommand(string command)
         {
@@ -47,6 +50,26 @@ namespace PuppetMaster
             }
         }
 
+        public void ShareMasterInfo()
+        {
+            List<IServer> remoteServers = Servers.Values.ToList();
+            foreach (IServer server in remoteServers)
+            {
+                server.GetMasterUpdateServers(ServerUrls);
+                server.GetMasterUpdateLocations(Locations);
+            }
+
+            // TODO DECIDE WHAT CLIENTS THE CLIENT RECEIVES
+            List<IClient> remoteClients = Clients.Values.ToList();
+            Console.WriteLine("remote client " + remoteClients[0].ToString());
+            foreach (IClient client in remoteClients)
+            {
+                client.GetMasterUpdateClients(ClientUrls);
+            }
+        }
+
+
+
         static void Main(string[] args)
         {
             ScriptMaster scriptMaster = new ScriptMaster();
@@ -59,9 +82,8 @@ namespace PuppetMaster
             {
                 scriptMaster.ReceiveCommand(line);
             }
+            scriptMaster.ShareMasterInfo();
 
-            /*Process.Start(@"..\..\..\Server\bin\Debug\Server.exe");
-            Process.Start(@"..\..\..\Client\bin\Debug\Client.exe", "Maria 8080");*/
             Console.ReadLine();
         }
     }

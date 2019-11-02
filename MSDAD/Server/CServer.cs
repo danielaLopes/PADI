@@ -13,18 +13,18 @@ namespace Server
 
     public class CServer : MarshalByRefObject, IServer
     {     
-        private List<User> _users;
-
         private Hashtable _currentMeetingProposals;
 
-        // to send messages to clients asynchhronously, otherwise the loop would deadlock
-        //public UpdateMessagesDelegate _updateMessagesDelegate;
-        //public AsyncCallback _updateMessagesCallback;
+        private List<IServer> _servers;
+
+        private Dictionary<string, Location> _locations;
+
+        private Dictionary<string, IClient> _clients;
 
         private readonly string SERVER_ID;
         private readonly string SERVER_URL;
 
-        public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay)
+        public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay, List<string> serverUrls = null)
         {
             SERVER_ID = serverId;
             SERVER_URL = url;
@@ -33,20 +33,25 @@ namespace Server
             ChannelServices.RegisterChannel(serverChannel, false);
 
             // creates the server's remote object
-            RemotingServices.Marshal(this, SERVER_ID, typeof(CServer));
+            RemotingServices.Marshal(this, SERVER_ID, typeof(IServer));
 
-            _users = new List<User>();
             _currentMeetingProposals = new Hashtable();
 
-            //_updateMessagesDelegate = new UpdateMessagesDelegate(UpdateMessages);
-            //_updateMessagesCallback = new AsyncCallback(UpdateMessagesCallback);
+            _clients = new Dictionary<string, IClient>();
+
+            _servers = new List<IServer>();
+            // gets other server's remote objects and saves them
+            if (serverUrls != null)
+            {
+                GetMasterUpdateServers(serverUrls);
+            }
+            // else : the puppet master invokes GetMasterUpdateServers method
         }
 
         public void RegisterUser(string username, string clientUrl)
         {
             // obtain client remote object
-            IClient remoteClient = (IClient)Activator.GetObject(typeof(IClient), clientUrl);
-            _users.Add(new User(remoteClient, username));
+            _clients.Add(username, (IClient)Activator.GetObject(typeof(IClient), clientUrl));
 
             Console.WriteLine("New user " + username  + " with url " + clientUrl + " registered.");
         }
@@ -62,6 +67,29 @@ namespace Server
             MeetingProposal proposal = (MeetingProposal) _currentMeetingProposals[topic];
             proposal.Records.Add(record);
             Console.WriteLine(record.Name + " joined meeting proposal " + proposal.Topic + ".");
+        }
+
+        public void GetMasterUpdateServers(List<string> serverUrls)
+        {
+            foreach(string url in serverUrls)
+            {
+                _servers.Add((IServer)Activator.GetObject(typeof(IServer), url));
+            }
+        }
+
+        public void GetMasterUpdateLocations(Dictionary<string, Location> locations)
+        {
+            _locations = locations;
+        }
+
+        public void Status()
+        {
+
+        }
+
+        public void ShutDown()
+        {
+
         }
 
         /// <summary>
