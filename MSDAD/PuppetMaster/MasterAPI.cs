@@ -7,6 +7,15 @@ using System.Linq;
 
 namespace PuppetMaster
 {
+    delegate void ServerDelegate(string fields, string serverId, string url);
+    delegate void ClientDelegate(string fields, string username, string url);
+    delegate void AddRoomDelegate(List<string> fields);
+    delegate void StatusDelegate(string fields);
+    delegate void CrashDelegate(string fields);
+    delegate void FreezeDelegate(string fields);
+    delegate void UnfreezeDelegate(string fields);
+    delegate void ShutDownSystemDelegate();
+
     public class MasterAPI
     {
         public Dictionary<string, IServer> Servers { get; set; }
@@ -17,6 +26,15 @@ namespace PuppetMaster
 
         public Dictionary<string, Location> Locations { get; set; }
 
+        private ServerDelegate _serverDelegate;
+        private ClientDelegate _clientDelegate;
+        private AddRoomDelegate _addRoomDelegate;
+        private StatusDelegate _statusDelegate;
+        private CrashDelegate _crashDelegate;
+        private FreezeDelegate _freezeDelegate;
+        private UnfreezeDelegate _unfreezeDelegate;
+        private ShutDownSystemDelegate _shutDownSystemDelegate;
+
         public MasterAPI()
         {
             Servers = new Dictionary<string, IServer>();
@@ -26,11 +44,66 @@ namespace PuppetMaster
             ClientUrls = new List<string>();
 
             Locations = new Dictionary<string, Location>();
+
+            _serverDelegate = new ServerDelegate(ServerSync);
+            _clientDelegate = new ClientDelegate(ClientSync);
+            _addRoomDelegate = new AddRoomDelegate(AddRoomSync);
+            _statusDelegate = new StatusDelegate(StatusSync);
+            _crashDelegate = new CrashDelegate(CrashSync);
+            _freezeDelegate = new FreezeDelegate(FreezeSync);
+            _unfreezeDelegate = new UnfreezeDelegate(UnfreezeSync);
+            _shutDownSystemDelegate = new ShutDownSystemDelegate(ShutDownSystemSync);
+        }
+
+        public void Server(string fields, string serverId, string url)
+        {
+            _serverDelegate.BeginInvoke(fields,serverId, url, null, null);
+        }
+
+        public void Client(string fields, string username, string url)
+        {
+            _clientDelegate.BeginInvoke(fields, username, url, null, null);
+        }
+
+        public void AddRoom(List<string> fields)
+        {
+            _addRoomDelegate.BeginInvoke(fields, null, null);
+        }
+
+        public void Status(string fields)
+        {
+            _statusDelegate.BeginInvoke(fields, null, null);
+        }
+
+        public void Crash(string fields)
+        {
+            _crashDelegate.BeginInvoke(fields, null, null);
+        }
+
+        public void Freeze(string fields)
+        {
+            _freezeDelegate.BeginInvoke(fields, null, null);
+        }
+
+        public void Unfreeze(string fields)
+        {
+            _unfreezeDelegate.BeginInvoke(fields, null, null);
+        }
+
+        // Wait x mss
+        public void Wait(string fields)
+        {
+
+        }
+
+        public void ShutDownSystem()
+        {
+            _shutDownSystemDelegate.BeginInvoke(null, null);
         }
 
         // Server server id URL max faults min delay max delay
         // serverId <=> location
-        public void Server(string fields, string serverId, string url)
+        public void ServerSync(string fields, string serverId, string url)
         {
             Process.Start(@"..\..\..\Server\bin\Debug\Server.exe", fields);
             Servers.Add(serverId, (IServer)Activator.GetObject(typeof(IServer), url));
@@ -38,7 +111,7 @@ namespace PuppetMaster
         }
 
         // Client username client URL server URL script file
-        public void Client(string fields, string username, string url)
+        public void ClientSync(string fields, string username, string url)
         {
             Process.Start(@"..\..\..\Client\bin\Debug\Client.exe", fields);
             Clients.Add(username, (IClient)Activator.GetObject(typeof(IClient), url));
@@ -46,7 +119,7 @@ namespace PuppetMaster
         }
 
         // AddRoom location capacity room name
-        public void AddRoom(List<string> fields)
+        public void AddRoomSync(List<string> fields)
         {
             string locationName = fields[1];
             int capacity = Int32.Parse(fields[2]);
@@ -66,7 +139,7 @@ namespace PuppetMaster
         }
 
         // Status
-        public void Status(string fields)
+        public void StatusSync(string fields)
         {
 
         }
@@ -75,30 +148,24 @@ namespace PuppetMaster
 
 
         // Crash server id
-        public void Crash(string fields)
+        public void CrashSync(string fields)
         {
 
         }
 
         // Freeze server id
-        public void Freeze(string fields)
+        public void FreezeSync(string fields)
         {
 
         }
 
         // Unfreeze server id
-        public void Unfreeze(string fields)
+        public void UnfreezeSync(string fields)
         {
 
         }
 
-        // Wait x mss
-        public void Wait(string fields)
-        {
-
-        }
-
-        public void ShutDownSystem()
+        public void ShutDownSystemSync()
         {
 
         }

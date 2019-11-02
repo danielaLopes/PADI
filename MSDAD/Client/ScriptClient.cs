@@ -76,8 +76,6 @@ namespace Client
                 scriptClient.ReceiveCommand(line);
             }
 
-            client.Status();
-
             System.Console.WriteLine("<enter> para sair...");
             System.Console.ReadLine();
         }

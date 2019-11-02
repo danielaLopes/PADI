@@ -56,12 +56,13 @@ namespace PuppetMaster
             foreach (IServer server in remoteServers)
             {
                 server.GetMasterUpdateServers(ServerUrls);
+                // TODO TEMPORARY
+                server.GetMasterUpdateClients(ClientUrls);
                 server.GetMasterUpdateLocations(Locations);
             }
 
             // TODO DECIDE WHAT CLIENTS THE CLIENT RECEIVES
             List<IClient> remoteClients = Clients.Values.ToList();
-            Console.WriteLine("remote client " + remoteClients[0].ToString());
             foreach (IClient client in remoteClients)
             {
                 client.GetMasterUpdateClients(ClientUrls);

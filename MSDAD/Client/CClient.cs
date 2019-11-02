@@ -131,7 +131,7 @@ namespace Client
 
         public void Status()
         {
-            Console.WriteLine("ok");
+
         }
 
         public void ShutDown()

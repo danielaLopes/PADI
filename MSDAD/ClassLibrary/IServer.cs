@@ -14,6 +14,8 @@ namespace ClassLibrary
     {
         void GetMasterUpdateServers(List<string> serversUrls);
 
+        void GetMasterUpdateClients(List<string> clientUrls);
+
         void GetMasterUpdateLocations(Dictionary<string, Location> locations);
 
         void RegisterUser(string username, string clientUrl);

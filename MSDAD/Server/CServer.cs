@@ -17,6 +17,9 @@ namespace Server
 
         private List<IServer> _servers;
 
+        // TODO THIS IS JUST TEMPORARY UNTIL PEER TO PEER CLIENT COMMUNICATION
+        private List<IClient> _broadcastClients;
+
         private Dictionary<string, Location> _locations;
 
         private Dictionary<string, IClient> _clients;
@@ -24,7 +27,7 @@ namespace Server
         private readonly string SERVER_ID;
         private readonly string SERVER_URL;
 
-        public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay, List<string> serverUrls = null)
+        public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay, List<string> serverUrls = null, List<string> clientUrls = null)
         {
             SERVER_ID = serverId;
             SERVER_URL = url;
@@ -46,6 +49,14 @@ namespace Server
                 GetMasterUpdateServers(serverUrls);
             }
             // else : the puppet master invokes GetMasterUpdateServers method
+
+            _broadcastClients = new List<IClient>();
+            // gets clients's remote objects and saves them
+            if (clientUrls != null)
+            {
+                GetMasterUpdateClients(clientUrls);
+            }
+            // else : the puppet master invokes GetMasterUpdateClients method
         }
 
         public void RegisterUser(string username, string clientUrl)
@@ -74,6 +85,14 @@ namespace Server
             foreach(string url in serverUrls)
             {
                 _servers.Add((IServer)Activator.GetObject(typeof(IServer), url));
+            }
+        }
+
+        public void GetMasterUpdateClients(List<string> clientUrls)
+        {
+            foreach (string url in clientUrls)
+            {
+                _broadcastClients.Add((IClient)Activator.GetObject(typeof(IClient), url));
             }
         }
 
