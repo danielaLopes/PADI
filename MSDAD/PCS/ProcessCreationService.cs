@@ -1,20 +1,18 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
 
 namespace PCS
 {
-    class ProcessCreationService : MarshalByRefObject
+    public class ProcessCreationService : MarshalByRefObject
     {
         private const int PCS_PORT = 10000;
-        private readonly string PCS_NAME;
-        private readonly string PCS_URL;
+        private const string PCS_NAME = "pcs";
 
-        public ProcessCreationService(string pcsName, string pcsUrl)
+        public ProcessCreationService()
         {
-            PCS_NAME = pcsName;
-            PCS_URL = pcsUrl;
             // creates TCP channel
             TcpChannel channel = new TcpChannel(PCS_PORT);
             ChannelServices.RegisterChannel(channel, false);
@@ -22,16 +20,14 @@ namespace PCS
             RemotingServices.Marshal(this, PCS_NAME, typeof(ProcessCreationService));
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="args">
-        ///     args[0]->pcsName
-        ///     args[1]->pcsUrl
-        /// </param>
+        public void Start(string path, string fields)
+        {
+            Process.Start(@path, fields);
+        }
+
         static void Main(string[] args)
         {
-            new ProcessCreationService(args[0], args[1]);
+            new ProcessCreationService();
 
             System.Console.WriteLine("<enter> para sair...");
             System.Console.ReadLine();

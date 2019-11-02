@@ -56,9 +56,9 @@
       <Project>{5636266c-0ceb-44db-9aaf-20f74029c13a}</Project>
       <Name>ClassLibrary</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Server\Server.csproj">
-      <Project>{73a60f14-1a31-4495-be46-c76589e01119}</Project>
-      <Name>Server</Name>
+    <ProjectReference Include="..\PCS\PCS.csproj">
+      <Project>{993f26d7-0359-47df-9dad-e11e5ce6b19a}</Project>
+      <Name>PCS</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
