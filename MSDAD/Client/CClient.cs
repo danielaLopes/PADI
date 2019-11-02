@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
-using System.Text;
 using ClassLibrary;
 
 namespace Client
@@ -47,7 +45,7 @@ namespace Client
 
             _knownMeetingProposals = new List<MeetingProposal>();
 
-            SERVER_URL = serverUrl;           
+            SERVER_URL = serverUrl;
             // retrieve server's proxy
             _remoteServer = (IServer)Activator.GetObject(typeof(IServer), SERVER_URL);
             // register new user in remote server
@@ -83,6 +81,7 @@ namespace Client
                 DateLocationSlots = parsedSlots,
                 Invitees = parsedInvitees,
                 Records = new List<MeetingRecord>()
+
             };
             _remoteServer.Create(proposal);
 

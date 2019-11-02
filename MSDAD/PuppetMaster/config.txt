@@ -1,0 +1,2 @@
+Server 123 tcp://localhost:9898/123 1 1 1
+Client maria tcp://localhost:9090/maria tcp://localhost:9898/123 C:../../../Client/clientCommands.txt

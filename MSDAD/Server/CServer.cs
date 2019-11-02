@@ -3,7 +3,6 @@ using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
 using System.Collections.Generic;
-using System.Linq;
 using ClassLibrary;
 using System.Collections;
 
@@ -57,6 +56,8 @@ namespace Server
                 GetMasterUpdateClients(clientUrls);
             }
             // else : the puppet master invokes GetMasterUpdateClients method
+
+            Console.WriteLine("Server created at url: {0}", SERVER_URL);
         }
 
         public void RegisterUser(string username, string clientUrl)

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 
 namespace ClassLibrary
 {
-
     public interface IClient : ISystemNode
     {
         void GetMasterUpdateClients(List<string> clientsUrls);
