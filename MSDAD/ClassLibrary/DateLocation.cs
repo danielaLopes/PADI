@@ -23,6 +23,7 @@ namespace ClassLibrary
         }
     }
 
+    [Serializable]
     public class Location
     {
         public string Name { get; set; }
@@ -50,6 +51,7 @@ namespace ClassLibrary
         }
     }
 
+    [Serializable]
     public class Room
     {
         private string name;

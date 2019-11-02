@@ -4,7 +4,6 @@ using System.Linq;
 using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
-using System.Text;
 using ClassLibrary;
 
 namespace Client
@@ -13,6 +12,9 @@ namespace Client
     {
         private readonly string USERNAME;
         private readonly string CLIENT_URL;
+
+        // TODO save how many clients? for now we only need to have a list with clients
+        private List<IClient> _clients;
         
         // saves the meeting proposal the client knows about (created or received invitation)
         public List<MeetingProposal> _knownMeetingProposals;
@@ -29,7 +31,7 @@ namespace Client
         /// <param name="username"></param>
         /// <param name="clientUrl"></param>
         /// <param name="serverUrl"></param>
-        public CClient(string username, string clientUrl, string serverUrl)
+        public CClient(string username, string clientUrl, string serverUrl, List<string> clientsUrls = null)
         {
             USERNAME = username;
             CLIENT_URL = clientUrl;
@@ -39,6 +41,10 @@ namespace Client
             // create the client's remote object
             RemotingServices.Marshal(this, username, typeof(CClient));
 
+            Console.WriteLine("Client registered with username {0} with url {0}.", username, clientUrl);
+
+            _clients = new List<IClient>();
+
             _knownMeetingProposals = new List<MeetingProposal>();
 
             SERVER_URL = serverUrl;
@@ -46,6 +52,15 @@ namespace Client
             _remoteServer = (IServer)Activator.GetObject(typeof(IServer), SERVER_URL);
             // register new user in remote server
             _remoteServer.RegisterUser(username, CLIENT_URL);
+
+            _clients = new List<IClient>();
+
+            // gets other client's remote objects and saves them
+            if (clientsUrls != null)
+            {
+                GetMasterUpdateClients(clientsUrls);
+            }
+            // else : the puppet master invokes GetMasterUpdateClients method
         }
 
 
@@ -102,6 +117,24 @@ namespace Client
         }
 
         public void Wait(string milliseconds)
+        {
+
+        }
+
+        public void GetMasterUpdateClients(List<string> clientsUrls)
+        {
+            foreach (string url in clientsUrls)
+            {
+                _clients.Add(((IClient)Activator.GetObject(typeof(IClient), url)));
+            }
+        }
+
+        public void Status()
+        {
+
+        }
+
+        public void ShutDown()
         {
 
         }

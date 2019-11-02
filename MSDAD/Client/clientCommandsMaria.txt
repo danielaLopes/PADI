@@ -1,1 +1,1 @@
-create ola 3 2 2 Lisboa,2020-01-02 Lisboa,2010-01-03 Joao Maria
+create ola 3 2 1 Lisboa,2020-01-02 Lisboa,2010-01-03 maria

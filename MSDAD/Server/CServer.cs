@@ -3,33 +3,36 @@ using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
 using System.Collections.Generic;
-using System.Linq;
 using ClassLibrary;
 using System.Collections;
 
 namespace Server
 {
-    //public delegate void UpdateMessagesDelegate(IClient remoteClient, string nickname, string message);
     public delegate void InvitationDelegate(IClient user, MeetingProposal proposal, string userName);
     public delegate void InvitationCallbackDelegate();
 
     public class CServer : MarshalByRefObject, IServer
     {     
-        private Hashtable _users;
-
         private Hashtable _currentMeetingProposals;
 
+        private List<IServer> _servers;
 
-        // to send messages to clients asynchhronously, otherwise the loop would deadlock
+        // TODO THIS IS JUST TEMPORARY UNTIL PEER TO PEER CLIENT COMMUNICATION
+        private List<IClient> _broadcastClients;
+
+        private Dictionary<string, Location> _locations;
+
+        private Dictionary<string, IClient> _clients;
+
+        // to send messages to clients asynchronously, otherwise the loop would deadlock
         private InvitationDelegate _sendInvitationsDelegate;
         private AsyncCallback _sendInvitationsCallbackDelegate;
-        //public UpdateMessagesDelegate _updateMessagesDelegate;
-        //public AsyncCallback _updateMessagesCallback;
+
 
         private readonly string SERVER_ID;
         private readonly string SERVER_URL;
 
-        public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay)
+        public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay, List<string> serverUrls = null, List<string> clientUrls = null)
         {
             SERVER_ID = serverId;
             SERVER_URL = url;
@@ -40,23 +43,38 @@ namespace Server
             // creates the server's remote object
             RemotingServices.Marshal(this, SERVER_ID, typeof(CServer));
 
-            _users = new Hashtable();
             _currentMeetingProposals = new Hashtable();
 
+            _clients = new Dictionary<string, IClient>();
+
+            _servers = new List<IServer>();
+            // gets other server's remote objects and saves them
+            if (serverUrls != null)
+            {
+                GetMasterUpdateServers(serverUrls);
+            }
+            // else : the puppet master invokes GetMasterUpdateServers method
+
+            _broadcastClients = new List<IClient>();
+            // gets clients's remote objects and saves them
+            if (clientUrls != null)
+            {
+                GetMasterUpdateClients(clientUrls);
+            }
+            // else : the puppet master invokes GetMasterUpdateClients method
+
             Console.WriteLine("Server created at url: {0}", SERVER_URL);
+
             _sendInvitationsDelegate = new InvitationDelegate(SendInvitationToClient);
             _sendInvitationsCallbackDelegate = new AsyncCallback(SendInvitationCallback);
-            //_updateMessagesDelegate = new UpdateMessagesDelegate(UpdateMessages);
-            //_updateMessagesCallback = new AsyncCallback(UpdateMessagesCallback);
         }
 
         public void RegisterUser(string username, string clientUrl) 
         {
             // obtain client remote object
-            IClient remoteClient = (IClient)Activator.GetObject(typeof(IClient), clientUrl);
-            _users.Add(username, remoteClient);
+            _clients.Add(username, (IClient)Activator.GetObject(typeof(IClient), clientUrl));
 
-            Console.WriteLine("New user " + username  + " with url " + clientUrl + " registered.");
+            Console.WriteLine("New user {0} with url {0} registered.", username, clientUrl);
         }
 
         public void Create(MeetingProposal proposal)
@@ -79,20 +97,20 @@ namespace Server
 
             if (proposal.Invitees == null)
             {
-                foreach (DictionaryEntry user in _users)
+                foreach (KeyValuePair<string, IClient> client in _clients)
                 {
-                    _sendInvitationsDelegate.BeginInvoke((IClient)user.Value, proposal, (string)user.Key, SendInvitationCallback, null); 
+                    _sendInvitationsDelegate.BeginInvoke(client.Value, proposal, client.Key, SendInvitationCallback, null); 
                 }
 
             }
             else
             {
-                foreach (string user in proposal.Invitees)
+                foreach (string username in proposal.Invitees)
                 {
-                    if (user != proposal.Coordinator)
+                    if (username != proposal.Coordinator)
                     {
-                        IClient invitee = (IClient)_users[user];
-                        _sendInvitationsDelegate.BeginInvoke(invitee, proposal, user, SendInvitationCallback, null);
+                        IClient invitee = _clients[username];
+                        _sendInvitationsDelegate.BeginInvoke(invitee, proposal, username, SendInvitationCallback, null);
                     }
                 }
 
@@ -110,6 +128,37 @@ namespace Server
         {
             _sendInvitationsDelegate.EndInvoke(res);
             Console.WriteLine("finished sending invitation");
+        }
+
+        public void GetMasterUpdateServers(List<string> serverUrls)
+        {
+            foreach(string url in serverUrls)
+            {
+                _servers.Add((IServer)Activator.GetObject(typeof(IServer), url));
+            }
+        }
+
+        public void GetMasterUpdateClients(List<string> clientUrls)
+        {
+            foreach (string url in clientUrls)
+            {
+                _broadcastClients.Add((IClient)Activator.GetObject(typeof(IClient), url));
+            }
+        }
+
+        public void GetMasterUpdateLocations(Dictionary<string, Location> locations)
+        {
+            _locations = locations;
+        }
+
+        public void Status()
+        {
+
+        }
+
+        public void ShutDown()
+        {
+
         }
 
         /// <summary>
