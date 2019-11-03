@@ -58,11 +58,75 @@ namespace Server
             Console.WriteLine("Created new meeting proposal for " + proposal.Topic + ".");
         }
 
+        public void List(string name, Hashtable knownProposals)
+        {
+            Hashtable proposals = new Hashtable();
+
+            foreach(DictionaryEntry meetingProposal in _currentMeetingProposals)
+            {
+                MeetingProposal proposal = (MeetingProposal)meetingProposal.Value;
+                if (proposal.Invitees.Contains(name) && knownProposals.Contains(proposal.Topic))
+                {
+                    proposals.Add(proposal.Topic, proposal);
+                }
+            }
+            _users.Find(u => u.Nickname == name).RemoteClient.UpdateList(proposals);
+        }
+
         public void Join(string topic, MeetingRecord record)
         {
-            MeetingProposal proposal = (MeetingProposal) _currentMeetingProposals[topic];
+            MeetingProposal proposal = (MeetingProposal)_currentMeetingProposals[topic];
+
+            foreach (DateLocation date1 in proposal.DateLocationSlots)
+            {
+                foreach(DateLocation date2 in record.DateLocationSlots)
+                {
+                    if (date1.Equals(date2))
+                    {
+                        date1.Invitees++;
+                    }
+                }
+            }
+
             proposal.Records.Add(record);
             Console.WriteLine(record.Name + " joined meeting proposal " + proposal.Topic + ".");
+        }
+
+        public void Close(string topic)
+        {
+            MeetingProposal proposal = (MeetingProposal)_currentMeetingProposals[topic];
+
+            DateLocation finalDateLocation = new DateLocation();
+            foreach(DateLocation dateLocation in proposal.DateLocationSlots)
+            {
+                
+                if (dateLocation.Invitees > finalDateLocation.Invitees)
+                {
+                    finalDateLocation = dateLocation;
+                }
+            }
+
+            if (finalDateLocation.Invitees < proposal.MinAttendees)
+            {
+                Console.WriteLine("finalDateLocation.Invitees" + finalDateLocation.Invitees);
+                Console.WriteLine("proposal.MinAttendees" + proposal.MinAttendees);
+                proposal.Status = Status.Cancelled;
+            }
+            else
+            {
+                proposal.Status = Status.Closed;
+
+                proposal.FinalDateLocation = finalDateLocation;
+                foreach(MeetingRecord record in proposal.Records)
+                {
+                    if (record.DateLocationSlots.Contains(finalDateLocation))
+                    {
+                        Console.WriteLine("adding participant" + record.Name);
+                        proposal.Participants.Add(record.Name);
+                    }
+                }
+            }
+            Console.WriteLine(proposal.Coordinator + " closed meeting proposal " + proposal.Topic + ".");
         }
 
         /// <summary>

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,7 +16,9 @@ namespace ClassLibrary
         void RegisterUser(string username, string clientUrl);
 
         void Create(MeetingProposal proposal);
+        void List(string name, Hashtable knownProposals);
 
         void Join(string topic, MeetingRecord record);
+        void Close(string topic);
     }
 }

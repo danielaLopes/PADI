@@ -10,17 +10,26 @@ namespace ClassLibrary
     {
         private string locationName;
         private string date;
+        public int Invitees { get; set; }
 
-        public DateLocation(string locationName, string date)
+        public DateLocation(string locationName = "", string date = "")
         {
             this.locationName = locationName;
             this.date = date;
+            this.Invitees = 0;
         }
 
         public override string ToString()
         {
             return locationName + "," + date;
         }
+
+        public override bool Equals(object obj)
+        {
+            DateLocation dateLocation = (DateLocation) obj;
+            return (dateLocation != null) && (this.locationName.Equals(dateLocation.locationName)) && (this.date.Equals(dateLocation.date));
+        }
+
     }
 
     public class Location

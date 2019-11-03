@@ -1,21 +1,23 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
 using System.Text;
+using System.Threading;
 using ClassLibrary;
 
 namespace Client
 {
-    public class CClient : MarshalByRefObject, IClient
+    public class CClient : MarshalByRefObject, IClient, ILocalClient
     {
         private readonly string USERNAME;
         private readonly string CLIENT_URL;
         
         // saves the meeting proposal the client knows about (created or received invitation)
-        private List<MeetingProposal> _knownMeetingProposals;
+        private Hashtable _knownMeetingProposals;
 
         // preferred server
         private readonly string SERVER_URL;
@@ -39,7 +41,7 @@ namespace Client
             // create the client's remote object
             RemotingServices.Marshal(this, username, typeof(CClient));
 
-            _knownMeetingProposals = new List<MeetingProposal>();
+            _knownMeetingProposals = new Hashtable();
 
             SERVER_URL = serverUrl;
             // retrieve server's proxy
@@ -51,8 +53,11 @@ namespace Client
 
         public void List()
         {
-            foreach(MeetingProposal proposal in _knownMeetingProposals)
+            _remoteServer.List(USERNAME, _knownMeetingProposals);
+
+            foreach(DictionaryEntry meetingProposal in _knownMeetingProposals)
             {
+                MeetingProposal proposal = (MeetingProposal)meetingProposal.Value;
                 Console.WriteLine(proposal);
             }
         }
@@ -67,12 +72,14 @@ namespace Client
                 MinAttendees = Int32.Parse(minAttendees),
                 DateLocationSlots = parsedSlots,
                 Invitees = parsedInvitees,
-                Records = new List<MeetingRecord>()
+                Records = new List<MeetingRecord>(),
+                Participants = new List<string>(),
+                Status = Status.Open
 
             };
             _remoteServer.Create(proposal);
 
-            _knownMeetingProposals.Add(proposal);
+            _knownMeetingProposals.Add(proposal.Topic, proposal);
 
             // TODO
             if (invitees != null)
@@ -88,27 +95,37 @@ namespace Client
 
         public void Join(string meetingTopic, List<string> slots)
         {
-            List<DateLocation> parsedSlots = ParseSlots(slots);
-            MeetingRecord record = new MeetingRecord
+            if (_knownMeetingProposals.Contains(meetingTopic))
             {
-                Name = USERNAME,
-                DateLocationSlots = parsedSlots
-            };
-            _remoteServer.Join(meetingTopic, record);
+                List<DateLocation> parsedSlots = ParseSlots(slots);
+                MeetingRecord record = new MeetingRecord
+                {
+                    Name = USERNAME,
+                    DateLocationSlots = parsedSlots
+                };
+                _remoteServer.Join(meetingTopic, record);
+            }
         }
 
         public void Close(string meetingTopic)
         {
-
+            _remoteServer.Close(meetingTopic);
         }
 
         public void Wait(string milliseconds)
         {
+            Thread.Sleep(Int32.Parse(milliseconds));
+            Console.WriteLine("waited" + milliseconds);
+        }
+
+        public void UpdateList(Hashtable proposals) 
+        {
+            _knownMeetingProposals = proposals;
 
         }
 
-        // slots -> Lisboa,2019-11-14 Porto,2020-02-03
-        public List<DateLocation> ParseSlots(List<string> slots)
+    // slots -> Lisboa,2019-11-14 Porto,2020-02-03
+    public List<DateLocation> ParseSlots(List<string> slots)
         {
             List<DateLocation> parsedSlots = new List<DateLocation>();
             foreach (string slot in slots)

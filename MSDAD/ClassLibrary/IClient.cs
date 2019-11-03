@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace ClassLibrary
@@ -6,14 +7,8 @@ namespace ClassLibrary
 
     public interface IClient
     {
-        void List();
 
-        void Create(string meetingTopic, string minAttendees, List<string> slots, List<string> invitees = null);
+        void UpdateList(Hashtable proposals);
 
-        void Join(string meetingTopic, List<string> slots);
-
-        void Close(string meetingTopic);
-
-        void Wait(string milliseconds);
     }
 }
