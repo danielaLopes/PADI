@@ -1,14 +1,16 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
+using System.Threading;
 using ClassLibrary;
 
 namespace Client
 {
-    public class CClient : MarshalByRefObject, IClient
+    public class CClient : MarshalByRefObject, IClient, ILocalClient
     {
         private readonly string USERNAME;
         private readonly string CLIENT_URL;
@@ -17,7 +19,7 @@ namespace Client
         private List<IClient> _clients;
         
         // saves the meeting proposal the client knows about (created or received invitation)
-        public List<MeetingProposal> _knownMeetingProposals;
+        public Dictionary<string, MeetingProposal> _knownMeetingProposals;
 
         // preferred server
         private readonly string SERVER_URL;
@@ -45,7 +47,7 @@ namespace Client
 
             _clients = new List<IClient>();
 
-            _knownMeetingProposals = new List<MeetingProposal>();
+            _knownMeetingProposals = new Dictionary<string, MeetingProposal>();
 
             SERVER_URL = serverUrl;
             // retrieve server's proxy
@@ -66,8 +68,10 @@ namespace Client
 
         public void List()
         {
-            foreach(MeetingProposal proposal in _knownMeetingProposals)
+            _remoteServer.List(USERNAME, _knownMeetingProposals);
+            foreach (KeyValuePair<string, MeetingProposal> meetingProposal in _knownMeetingProposals)
             {
+                MeetingProposal proposal = meetingProposal.Value;
                 Console.WriteLine(proposal);
             }
         }
@@ -75,18 +79,22 @@ namespace Client
         public void Create(string meetingTopic, string minAttendees, List<string> slots, List<string> invitees = null)
         {
             List<DateLocation> parsedSlots = ParseSlots(slots);
-            MeetingProposal proposal = new MeetingProposal {
+            List<string> parsedInvitees = invitees;
+            MeetingProposal proposal = new MeetingProposal
+            {
                 Coordinator = USERNAME,
                 Topic = meetingTopic,
                 MinAttendees = Int32.Parse(minAttendees),
                 DateLocationSlots = parsedSlots,
-                Invitees = invitees,
-                Records = new List<MeetingRecord>()
+                Invitees = parsedInvitees,
+                Records = new List<MeetingRecord>(),
+                Participants = new List<string>(),
+                MeetingStatus = MeetingStatus.Open
 
             };
             _remoteServer.Create(proposal);
 
-            _knownMeetingProposals.Add(proposal);
+            _knownMeetingProposals.Add(proposal.Topic, proposal);
 
             // TODO
             if (invitees != null)
@@ -102,22 +110,33 @@ namespace Client
 
         public void Join(string meetingTopic, List<string> slots)
         {
-            List<DateLocation> parsedSlots = ParseSlots(slots);
-            MeetingRecord record = new MeetingRecord
+            if (_knownMeetingProposals.ContainsKey(meetingTopic))
             {
-                Name = USERNAME,
-                DateLocationSlots = parsedSlots
-            };
-            _remoteServer.Join(meetingTopic, record);
+                //Console.WriteLine("hello im joining");
+                List<DateLocation> parsedSlots = ParseSlots(slots);
+                MeetingRecord record = new MeetingRecord
+                {
+                    Name = USERNAME,
+                    DateLocationSlots = parsedSlots
+                };
+                _remoteServer.Join(meetingTopic, record);
+            }
         }
 
         public void Close(string meetingTopic)
         {
-
+            _remoteServer.Close(meetingTopic);
         }
 
         public void Wait(string milliseconds)
         {
+            Thread.Sleep(Int32.Parse(milliseconds));
+            Console.WriteLine("waited" + milliseconds);
+        }
+
+        public void UpdateList(Dictionary<string, MeetingProposal> proposals)
+        {
+            _knownMeetingProposals = proposals;
 
         }
 
@@ -141,7 +160,7 @@ namespace Client
 
         public void ReceiveInvitation(MeetingProposal proposal)
         {    
-            _knownMeetingProposals.Add(proposal);
+            _knownMeetingProposals.Add(proposal.Topic, proposal);
             Console.WriteLine("Received proposal with topic: {0}", proposal.Topic);
         }
 

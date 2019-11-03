@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 
 namespace ClassLibrary
 {
@@ -18,7 +19,10 @@ namespace ClassLibrary
 
         void Create(MeetingProposal proposal);
 
+        void List(string name, Dictionary<string,MeetingProposal> knownProposals);
+
         void Join(string topic, MeetingRecord record);
+        void Close(string topic);
 
     }
 }
