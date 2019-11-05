@@ -142,7 +142,7 @@ namespace PuppetMaster
                 location = new Location(locationName);
                 Locations.Add(locationName, location);
             }
-            location.AddRoom(new Room(roomName, capacity));
+            location.AddRoom(new Room(roomName, capacity, Room.RoomStatus.NonBooked));
         }
 
         // Status

@@ -46,6 +46,7 @@
   <ItemGroup>
     <Compile Include="CClient.cs" />
     <Compile Include="ClientAPI.cs" />
+    <Compile Include="ILocalClient.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ScriptClient.cs" />
   </ItemGroup>

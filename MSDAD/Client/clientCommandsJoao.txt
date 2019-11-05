@@ -1,0 +1,5 @@
+wait 3000
+list
+join ola Lisboa,2020-01-02
+wait 4000
+list
