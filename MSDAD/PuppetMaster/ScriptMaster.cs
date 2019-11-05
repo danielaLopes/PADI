@@ -1,29 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using ClassLibrary;
 
 namespace PuppetMaster
 {
     public class ScriptMaster : MasterAPI
     {
-        public void ReceiveCommand(string command)
+        public List<WaitHandle> WaitHandles{ get; set; }
 
+        public ScriptMaster() : base() {
+            WaitHandles = new List<WaitHandle>();
+        }
+
+        public void ReceiveCommand(string command)
         {
             List<string> fields = command.Split().ToList();
             string strFields = command.Remove(0, fields[0].Length);
 
             if (fields[0].Equals("Server"))
             {
-                Server(strFields, fields[1], fields[2]);
+                WaitHandles.Add(Server(strFields, fields[1], fields[2]).AsyncWaitHandle);
             }
             else if (fields[0].Equals("Client"))
             {
-                Client(strFields, fields[1], fields[2]);
+                WaitHandles.Add(Client(strFields, fields[1], fields[2]).AsyncWaitHandle);
             }
             else if (fields[0].Equals("AddRoom"))
             {
-                AddRoom(fields);
+                WaitHandles.Add(AddRoom(fields).AsyncWaitHandle);
             }
             else if (fields[0].Equals("Status"))
             {
@@ -55,7 +61,10 @@ namespace PuppetMaster
                 server.GetMasterUpdateServers(ServerUrls);
                 // TODO TEMPORARY
                 server.GetMasterUpdateClients(ClientUrls);
-                server.GetMasterUpdateLocations(Locations);
+                //Console.WriteLine("ola");
+                //Console.WriteLine(Locations["Lisboa"]);
+                //server.GetMasterUpdateLocations(Locations);
+                Console.WriteLine("after updating server");
             }
 
             // TODO DECIDE WHAT CLIENTS THE CLIENT RECEIVES
@@ -66,8 +75,6 @@ namespace PuppetMaster
             }
         }
 
-
-
         static void Main(string[] args)
         {
             ScriptMaster scriptMaster = new ScriptMaster();
@@ -76,10 +83,29 @@ namespace PuppetMaster
 
             string[] lines = System.IO.File.ReadAllLines(@args[0]);
 
-            foreach (string line in lines)
+            Console.WriteLine("Press s for executing commands sequentially and n for executing step by step");
+            string mode = Console.ReadLine();
+            // sequentially
+            if (mode.Equals("s"))
             {
-                scriptMaster.ReceiveCommand(line);
+                foreach (string line in lines)
+                {
+                    scriptMaster.ReceiveCommand(line);
+                }
             }
+            // step by step
+            else if (mode.Equals("n"))
+            {
+                foreach (string line in lines)
+                {
+                    scriptMaster.ReceiveCommand(line);
+                    Console.WriteLine("Enter for next command");
+                    Console.ReadLine(); 
+                }
+            }
+            
+            // waits for all servers, clients and rooms to be added before sharing information
+            WaitHandle.WaitAll(scriptMaster.WaitHandles.ToArray());
             scriptMaster.ShareMasterInfo();
 
             Console.ReadLine();

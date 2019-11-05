@@ -58,19 +58,19 @@ namespace PuppetMaster
             _shutDownSystemDelegate = new ShutDownSystemDelegate(ShutDownSystemSync);
         }
 
-        public void Server(string fields, string serverId, string url)
+        public IAsyncResult Server(string fields, string serverId, string url)
         {
-            _serverDelegate.BeginInvoke(fields,serverId, url, null, null);
+            return _serverDelegate.BeginInvoke(fields,serverId, url, null, null);
         }
 
-        public void Client(string fields, string username, string url)
+        public IAsyncResult Client(string fields, string username, string url)
         {
-            _clientDelegate.BeginInvoke(fields, username, url, null, null);
+            return _clientDelegate.BeginInvoke(fields, username, url, null, null);
         }
 
-        public void AddRoom(List<string> fields)
+        public IAsyncResult AddRoom(List<string> fields)
         {
-            _addRoomDelegate.BeginInvoke(fields, null, null);
+            return _addRoomDelegate.BeginInvoke(fields, null, null);
         }
 
         public void Status(string fields)
@@ -113,6 +113,8 @@ namespace PuppetMaster
             //Process.Start(@"..\..\..\Server\bin\Debug\Server.exe", fields);
             Servers.Add(serverId, (IServer)Activator.GetObject(typeof(IServer), url));
             ServerUrls.Add(url);
+
+            Console.WriteLine("Server {0} created!", serverId);
         }
 
         // Client username client URL server URL script file
@@ -123,6 +125,8 @@ namespace PuppetMaster
             //Process.Start(@"..\..\..\Client\bin\Debug\Client.exe", fields);
             Clients.Add(username, (IClient)Activator.GetObject(typeof(IClient), url));
             ClientUrls.Add(url);
+
+            Console.WriteLine("Client {0} created!", username);
         }
 
         // AddRoom location capacity room name
@@ -135,14 +139,26 @@ namespace PuppetMaster
             Location location;
             if(Locations.ContainsKey(locationName))
             {
-                location = (Location)Locations[locationName];
+                lock (Locations[locationName])
+                {
+                    location = (Location)Locations[locationName];
+                }
+                
             }
             else
             {
                 location = new Location(locationName);
-                Locations.Add(locationName, location);
+                lock (Locations)
+                {
+                    Locations.Add(locationName, location);
+                }           
             }
-            location.AddRoom(new Room(roomName, capacity));
+            lock (location)
+            {
+                location.AddRoom(new Room(roomName, capacity));
+            }
+
+            Console.WriteLine("Room {0} created!", roomName);
         }
 
         // Status

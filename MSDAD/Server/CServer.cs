@@ -5,6 +5,7 @@ using System.Runtime.Remoting.Channels.Tcp;
 using System.Collections.Generic;
 using ClassLibrary;
 using System.Collections;
+using System.Threading;
 
 namespace Server
 {
@@ -132,7 +133,8 @@ namespace Server
 
         public void GetMasterUpdateServers(List<string> serverUrls)
         {
-            foreach(string url in serverUrls)
+            Console.WriteLine(" GetMasterUpdateServers");
+            foreach (string url in serverUrls)
             {
                 _servers.Add((IServer)Activator.GetObject(typeof(IServer), url));
             }
@@ -140,6 +142,7 @@ namespace Server
 
         public void GetMasterUpdateClients(List<string> clientUrls)
         {
+            Console.WriteLine(" GetMasterUpdateClients");
             foreach (string url in clientUrls)
             {
                 _broadcastClients.Add((IClient)Activator.GetObject(typeof(IClient), url));
@@ -148,7 +151,10 @@ namespace Server
 
         public void GetMasterUpdateLocations(Dictionary<string, Location> locations)
         {
+            Console.WriteLine(" GetMasterUpdateLocations");
+            Console.WriteLine("Got locations from puppetmaster {0} {0}", _locations["Porto"].Rooms.ToString(), _locations["Lisboa"].Rooms.ToString());
             _locations = locations;
+            Console.WriteLine(" GetMasterUpdateLocations after");
         }
 
         public void Status()
@@ -159,6 +165,15 @@ namespace Server
         public void ShutDown()
         {
 
+        }
+
+        public void GetRooms()
+        {
+            Console.WriteLine("GetRooms()");
+            Console.WriteLine("How many rooms: {0}", _locations.Count);
+            Console.WriteLine("How many rooms in Lisboa: {0}", _locations["Lisboa"].Rooms.Count);
+            Console.WriteLine(_locations["Lisboa"].Rooms.ToString());
+            Console.WriteLine(_locations["Porto"].Rooms.ToString());
         }
 
         /// <summary>
@@ -173,7 +188,13 @@ namespace Server
         /// </param>
         static void Main(string[] args) {
 
-            new CServer(args[0], args[1], Int32.Parse(args[2]), Int32.Parse(args[3]), Int32.Parse(args[4]));
+            CServer server = new CServer(args[0], args[1], Int32.Parse(args[2]), Int32.Parse(args[3]), Int32.Parse(args[4]));
+
+
+            //Thread.Sleep(1000);
+
+            //server.GetRooms();
+
             
             System.Console.WriteLine("<enter> para sair...");
 			System.Console.ReadLine();
