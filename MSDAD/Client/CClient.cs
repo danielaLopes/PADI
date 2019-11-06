@@ -150,7 +150,7 @@ namespace Client
 
         public void Status()
         {
-
+            Console.WriteLine("Client is active. URL: {0}", CLIENT_URL);
         }
 
         public void ShutDown()
