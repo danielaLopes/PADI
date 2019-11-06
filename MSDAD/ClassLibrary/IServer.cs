@@ -11,11 +11,8 @@ namespace ClassLibrary
     {
         // methods to be used by PuppetMaster
         void GetMasterUpdateServers(List<string> urls);
-        //void GetMasterUpdateServer();
 
         void GetMasterUpdateClients(List<string> urls);
-
-        void GetMasterUpdateLocations(Dictionary<string, Location> locations);
 
         // methods to be used by Clients
         void RegisterUser(string username, string clientUrl);
@@ -29,6 +26,9 @@ namespace ClassLibrary
         void Close(string topic);
 
         void AttributeNewServer(string username);
+
+        // methods to be used by other servers
+        void ReceiveNewMeeting(MeetingProposal meeting);
 
     }
 }

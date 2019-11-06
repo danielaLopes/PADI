@@ -11,6 +11,7 @@ using System.Linq;
 namespace Server
 {
     public delegate void InvitationDelegate(IClient user, MeetingProposal proposal, string userName);
+    public delegate void BroadcastNewMeetingDelegate(IServer user, MeetingProposal proposal);
 
     public class CServer : MarshalByRefObject, IServer
     {
@@ -43,6 +44,9 @@ namespace Server
         private InvitationDelegate _sendInvitationsDelegate;
         private AsyncCallback _sendInvitationsCallbackDelegate;
 
+        private BroadcastNewMeetingDelegate _broadcastNewMeetingDelegate;
+        private AsyncCallback _broadcastNewMeetingCallback;
+
         public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay, string roomsFile, List<string> serverUrls = null, List<string> clientUrls = null)
         //public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay, List<string> locations = null, List<string> serverUrls = null, List<string> clientUrls = null)
         {
@@ -67,6 +71,9 @@ namespace Server
 
             _sendInvitationsDelegate = new InvitationDelegate(SendInvitationToClient);
             _sendInvitationsCallbackDelegate = new AsyncCallback(SendInvitationCallback);
+
+            _broadcastNewMeetingDelegate = new BroadcastNewMeetingDelegate(BroadcastNewMeetingToServer);
+            _broadcastNewMeetingCallback = new AsyncCallback(BroadcastNewMeetingCallback);
         }
 
         public void RegisterUser(string username, string clientUrl) 
@@ -83,6 +90,7 @@ namespace Server
 
             Console.WriteLine("Created new meeting proposal for " + proposal.Topic + ".");
             SendAllInvitations(proposal);
+            BroadcastNewMeeting(proposal);
         }
 
         public void List(string name, Dictionary<string,MeetingProposal> knownProposals)
@@ -175,7 +183,6 @@ namespace Server
                 {
                     _sendInvitationsDelegate.BeginInvoke(client.Value, proposal, client.Key, SendInvitationCallback, null); 
                 }
-
             }
             else
             {
@@ -187,8 +194,6 @@ namespace Server
                         _sendInvitationsDelegate.BeginInvoke(invitee, proposal, username, SendInvitationCallback, null);
                     }
                 }
-
-
             }
         }
 
@@ -202,6 +207,33 @@ namespace Server
         {
             _sendInvitationsDelegate.EndInvoke(res);
             Console.WriteLine("finished sending invitation");
+        }
+
+        public void BroadcastNewMeeting(MeetingProposal proposal)
+        {
+            foreach (IServer server in _servers)
+            {
+                _broadcastNewMeetingDelegate.BeginInvoke(server, proposal, BroadcastNewMeetingCallback, null);
+            }
+        }
+
+        public void BroadcastNewMeetingToServer(IServer server, MeetingProposal proposal)
+        {
+            Console.WriteLine("going to send new meeting");
+            server.ReceiveNewMeeting(proposal);
+        }
+
+        public void BroadcastNewMeetingCallback(IAsyncResult res)
+        {
+            _broadcastNewMeetingDelegate.EndInvoke(res);
+            Console.WriteLine("finished sending new meeting");
+        }
+
+        // TODO CAUSALITY!
+        public void ReceiveNewMeeting(MeetingProposal meeting)
+        {
+            Console.WriteLine("received new meeting");
+            _currentMeetingProposals.Add(meeting.Topic, meeting);
         }
 
         public void RegisterRooms(string fileName)
@@ -228,43 +260,28 @@ namespace Server
         public void GetMasterUpdateServers(List<string> serverUrls)
         {
             _serverUrls = serverUrls;
-            Console.WriteLine(_serverUrls.Count());
-            Console.WriteLine(" GetMasterUpdateServers");
+
             foreach (string url in _serverUrls)
             {
-                Console.WriteLine("server url: {0}", url);
-                _servers.Add((IServer)Activator.GetObject(typeof(IServer), url));
+                // does not add this server
+                if (!url.Equals(SERVER_URL))
+                {
+                    _servers.Add((IServer)Activator.GetObject(typeof(IServer), url));
+                }
             }
-            Console.WriteLine("number of servers: {0}", _servers.Count.ToString());
         }
 
         public void GetMasterUpdateServer(string url)
         {
-            Console.WriteLine("server url: {0}", url);
             _servers.Add((IServer)Activator.GetObject(typeof(IServer), url));
         }
 
         public void GetMasterUpdateClients(List<string> clientUrls)
         {
-            Console.WriteLine(" GetMasterUpdateClients");
-            Console.WriteLine("client url 1: {0}", clientUrls[0]);
             foreach (string url in clientUrls)
             {
-                Console.WriteLine("client url: {0}", url);
                 _broadcastClients.Add((IClient)Activator.GetObject(typeof(IClient), url));
             }
-            Console.WriteLine("number of clients: {0}", _broadcastClients.Count.ToString());
-        }
-
-        public void GetMasterUpdateLocations(Dictionary<string, Location> locations)
-        {
-            Console.WriteLine(" GetMasterUpdateLocations");
-            Console.WriteLine("Got locations from puppetmaster {0} {0}", _locations["Porto"].Rooms.ToString(), _locations["Lisboa"].Rooms.ToString());
-            
-            _locations = locations;
-
-            Console.WriteLine(" GetMasterUpdateLocations after");
-
         }
 
         public void AttributeNewServer(string username)
