@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
@@ -8,6 +9,8 @@ using PCS;
 
 namespace PuppetMaster
 {
+    delegate void StartProcessDelegate(string pcsBaseUrl, string path, string fields);
+
     delegate void ServerDelegate(string fields, string serverId, string url);
     delegate void ClientDelegate(string fields, string username, string url);
     delegate void AddRoomDelegate(List<string> fields);
@@ -25,21 +28,23 @@ namespace PuppetMaster
         private const int PCS_PORT = 10000;
         private const string PCS_NAME = "pcs";
 
-        public Dictionary<string, IServer> Servers { get; set; }
+        public ConcurrentDictionary<string, IServer> Servers { get; set; }
         public List<string> ServerUrls { get; set; }
 
-        public Dictionary<string, IClient> Clients { get; set; }
+        public ConcurrentDictionary<string, IClient> Clients { get; set; }
         public List<string> ClientUrls { get; set; }
 
         /// <summary>
         /// string->base url of pcs to match with server/client's urls
         /// ProcessCreationService->pcs's remote object
         /// </summary>
-        public Dictionary<string, ProcessCreationService> PCSs { get; set; }
+        public ConcurrentDictionary<string, ProcessCreationService> PCSs { get; set; }
 
         //public Dictionary<string, Location> Locations { get; set; }
         public List<string> _locationsText = new List<string>();
         public const string LOCATIONS_PCS_PATH = @"..\..\..\Server\locationsConfig.txt";
+
+        private StartProcessDelegate _startProcessDelegate;
 
         private ServerDelegate _serverDelegate;
         private ClientDelegate _clientDelegate;
@@ -56,18 +61,18 @@ namespace PuppetMaster
 
         public MasterAPI(string[] pcsUrls)
         {
-            Servers = new Dictionary<string, IServer>();
+            Servers = new ConcurrentDictionary<string, IServer>();
             ServerUrls = new List<string>();
 
-            Clients = new Dictionary<string, IClient>();
+            Clients = new ConcurrentDictionary<string, IClient>();
             ClientUrls = new List<string>();
 
-            PCSs = new Dictionary<string, ProcessCreationService>();
+            PCSs = new ConcurrentDictionary<string, ProcessCreationService>();
             foreach (string url in pcsUrls) {
-                PCSs.Add(BaseUrlExtractor.Extract(url), (ProcessCreationService)Activator.GetObject(typeof(ProcessCreationService), url));
+                PCSs.TryAdd(BaseUrlExtractor.Extract(url), (ProcessCreationService)Activator.GetObject(typeof(ProcessCreationService), url));
             }
 
-            //Locations = new Dictionary<string, Location>();
+            _startProcessDelegate = new StartProcessDelegate(StartProcess);
 
             _serverDelegate = new ServerDelegate(ServerSync);
             _clientDelegate = new ClientDelegate(ClientSync);
@@ -133,15 +138,9 @@ namespace PuppetMaster
         // serverId <=> location
         public void ServerSync(string fields, string serverId, string url)
         {
-            // match right PCS
-            string baseServerUrl = BaseUrlExtractor.Extract(url);
-            ProcessCreationService pcs = PCSs[baseServerUrl];
-
-            pcs.Start(@"..\..\..\Server\bin\Debug\Server.exe", fields + " " + LOCATIONS_PCS_PATH);
-            pcs.RoomsConfigFile(LOCATIONS_PCS_PATH, _locationsText);
-
-            //Process.Start(@"..\..\..\Server\bin\Debug\Server.exe", fields);
-            Servers.Add(serverId, (IServer)Activator.GetObject(typeof(IServer), url));
+            IAsyncResult result = _startProcessDelegate.BeginInvoke(url, @"..\..\..\Server\bin\Debug\Server.exe", fields + " " + LOCATIONS_PCS_PATH, null, null);
+            result.AsyncWaitHandle.WaitOne();
+            Servers.TryAdd(serverId, (IServer)Activator.GetObject(typeof(IServer), url));
             ServerUrls.Add(url);
 
             Console.WriteLine("Server {0} created!", serverId);
@@ -150,17 +149,20 @@ namespace PuppetMaster
         // Client username client URL server URL script file
         public void ClientSync(string fields, string username, string url)
         {
-            // match right PCS
-            string baseServerUrl = BaseUrlExtractor.Extract(url);
-            ProcessCreationService pcs = PCSs[baseServerUrl];
-
-            pcs.Start(@"..\..\..\Client\bin\Debug\Client.exe", fields);
-
-            //Process.Start(@"..\..\..\Client\bin\Debug\Client.exe", fields);
-            Clients.Add(username, (IClient)Activator.GetObject(typeof(IClient), url));
+            IAsyncResult result = _startProcessDelegate.BeginInvoke(url, @"..\..\..\Client\bin\Debug\Client.exe", fields, null, null);
+            result.AsyncWaitHandle.WaitOne();
+            Clients.TryAdd(username, (IClient)Activator.GetObject(typeof(IClient), url));
             ClientUrls.Add(url);
 
             Console.WriteLine("Client {0} created!", username);
+        }
+
+        public void StartProcess(string url, string path, string fields)
+        {
+            // match right PCS
+            string basePcsUrl = BaseUrlExtractor.Extract(url);
+            ProcessCreationService pcs = PCSs[basePcsUrl];
+            pcs.Start(@path, fields);
         }
 
         // AddRoom location capacity room name
@@ -175,27 +177,6 @@ namespace PuppetMaster
                 _locationsText.Add(fields[1] + " " + fields[2] + " " + fields[3]);
             }
 
-            /*Location location;
-            if(Locations.ContainsKey(locationName))
-            {
-                lock (Locations[locationName])
-                {
-                    location = (Location)Locations[locationName];
-                }
-                
-            }
-            else
-            {
-                location = new Location(locationName);
-                lock (Locations)
-                {
-                    Locations.Add(locationName, location);
-                }           
-            }
-            lock (location)
-            {
-                location.AddRoom(new Room(roomName, capacity, Room.RoomStatus.NonBooked));
-            }*/
             Console.WriteLine("Room {0} created!", roomName);
         }
 

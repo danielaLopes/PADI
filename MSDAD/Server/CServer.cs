@@ -21,7 +21,7 @@ namespace Server
         private Dictionary<string,MeetingProposal> _currentMeetingProposals = new Dictionary<string, MeetingProposal>();
 
         // TODO THIS IS JUST TEMPORARY UNTIL PEER TO PEER CLIENT COMMUNICATION
-        private List<IClient> _broadcastClients = new List<IClient>();
+        private Dictionary<string, IClient> _broadcastClients = new Dictionary<string, IClient>();
 
         /// <summary>
         /// string->locationaName Locations->contains Rooms
@@ -179,7 +179,7 @@ namespace Server
 
             if (proposal.Invitees == null)
             {
-                foreach (KeyValuePair<string, IClient> client in _clients)
+                foreach (KeyValuePair<string, IClient> client in _broadcastClients)
                 {
                     _sendInvitationsDelegate.BeginInvoke(client.Value, proposal, client.Key, SendInvitationCallback, null); 
                 }
@@ -219,7 +219,7 @@ namespace Server
 
         public void BroadcastNewMeetingToServer(IServer server, MeetingProposal proposal)
         {
-            Console.WriteLine("going to send new meeting");
+            Console.WriteLine("going to send new meeting {0}", proposal.Topic);
             server.ReceiveNewMeeting(proposal);
         }
 
@@ -232,7 +232,7 @@ namespace Server
         // TODO CAUSALITY!
         public void ReceiveNewMeeting(MeetingProposal meeting)
         {
-            Console.WriteLine("received new meeting");
+            Console.WriteLine("received new meeting {0}", meeting.Topic);
             _currentMeetingProposals.Add(meeting.Topic, meeting);
         }
 
@@ -280,7 +280,9 @@ namespace Server
         {
             foreach (string url in clientUrls)
             {
-                _broadcastClients.Add((IClient)Activator.GetObject(typeof(IClient), url));
+                // TODO TEMPORARY
+                string clientName = url.Split('/').ToList()[3];
+                _broadcastClients.Add(clientName, (IClient)Activator.GetObject(typeof(IClient), url));
             }
         }
 
