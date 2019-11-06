@@ -10,18 +10,17 @@ using System.Threading;
 namespace Server
 {
     public delegate void InvitationDelegate(IClient user, MeetingProposal proposal, string userName);
-    public delegate void InvitationCallbackDelegate();
 
     public class CServer : MarshalByRefObject, IServer
     {     
-        private Hashtable _currentMeetingProposals;
+        private Dictionary<string,MeetingProposal> _currentMeetingProposals;
 
         private List<IServer> _servers;
 
         // TODO THIS IS JUST TEMPORARY UNTIL PEER TO PEER CLIENT COMMUNICATION
         private List<IClient> _broadcastClients;
 
-        private Dictionary<string, Location> _locations;
+        private Dictionary<string, Location> _locations = new Dictionary<string, Location>();
 
         private Dictionary<string, IClient> _clients;
 
@@ -44,7 +43,7 @@ namespace Server
             // creates the server's remote object
             RemotingServices.Marshal(this, SERVER_ID, typeof(CServer));
 
-            _currentMeetingProposals = new Hashtable();
+            _currentMeetingProposals = new Dictionary<string, MeetingProposal>();
 
             _clients = new Dictionary<string, IClient>();
 
@@ -86,13 +85,87 @@ namespace Server
             SendAllInvitations(proposal);
         }
 
+        public void List(string name, Dictionary<string,MeetingProposal> knownProposals)
+        {
+            Dictionary<string,MeetingProposal> proposals = new Dictionary<string, MeetingProposal>();
+
+            foreach (KeyValuePair<string, MeetingProposal> proposal in _currentMeetingProposals)
+            {
+                
+                if (proposal.Value.Invitees.Contains(name) && knownProposals.ContainsKey(proposal.Value.Topic))
+                {
+                    proposals.Add(proposal.Value.Topic, proposal.Value);
+                }
+            }
+            _clients[name].UpdateList(proposals);
+        }
+
         public void Join(string topic, MeetingRecord record)
         {
-            MeetingProposal proposal = (MeetingProposal) _currentMeetingProposals[topic];
+            MeetingProposal proposal = _currentMeetingProposals[topic];
+
+            foreach (DateLocation date1 in proposal.DateLocationSlots)
+            {
+                foreach (DateLocation date2 in record.DateLocationSlots)
+                {
+                    if (date1.Equals(date2))
+                    {
+                        date1.Invitees++;
+                    }
+                }
+            }
+
             proposal.Records.Add(record);
             Console.WriteLine(record.Name + " joined meeting proposal " + proposal.Topic + ".");
         }
-                    
+
+        public void Close(string topic)
+        {
+            MeetingProposal proposal = _currentMeetingProposals[topic];
+
+            DateLocation finalDateLocation = new DateLocation();
+            foreach (DateLocation dateLocation in proposal.DateLocationSlots)
+            {
+
+                if (dateLocation.Invitees > finalDateLocation.Invitees)
+                {
+                    finalDateLocation = dateLocation;
+                }
+            }
+
+            /*Location location = _locations[finalDateLocation.LocationName];
+            //<Room> possibleRooms = new List<Room>();
+            SortedDictionary<int, Room> possibleRooms = new SortedDictionary<int, Room>();
+
+            foreach (Room room in location.Rooms)
+            {
+
+                if (room.RoomAvailability == Room.RoomStatus.NonBooked )//&& room.Capacity >= finalDateLocation.Invitees)
+                {
+                    possibleRooms.Add(room.Capacity, room);
+                }
+            }*/
+
+            if (finalDateLocation.Invitees < proposal.MinAttendees)// || possibleRooms.Count == 0)
+            {
+                proposal.MeetingStatus = MeetingStatus.Cancelled;
+            }
+            else
+            {
+                proposal.MeetingStatus = MeetingStatus.Closed;
+
+                proposal.FinalDateLocation = finalDateLocation;
+                foreach (MeetingRecord record in proposal.Records)
+                {
+                    if (record.DateLocationSlots.Contains(finalDateLocation))
+                    {
+                        proposal.Participants.Add(record.Name);
+                    }
+                }
+            }
+            Console.WriteLine(proposal.Coordinator + " closed meeting proposal " + proposal.Topic + ".");
+        }
+
         public void SendAllInvitations(MeetingProposal proposal)
         {
 
@@ -153,13 +226,16 @@ namespace Server
         {
             Console.WriteLine(" GetMasterUpdateLocations");
             Console.WriteLine("Got locations from puppetmaster {0} {0}", _locations["Porto"].Rooms.ToString(), _locations["Lisboa"].Rooms.ToString());
+            
             _locations = locations;
+
             Console.WriteLine(" GetMasterUpdateLocations after");
+
         }
 
         public void Status()
         {
-
+            Console.WriteLine("Server is active. URL: {0}", SERVER_URL);
         }
 
         public void ShutDown()

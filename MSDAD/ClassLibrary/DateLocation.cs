@@ -8,22 +8,30 @@ namespace ClassLibrary
     [Serializable]
     public class DateLocation
     {
-        private string locationName;
+        public string LocationName { get; set; }
         private string date;
+        public int Invitees { get; set; }
 
-        public DateLocation(string locationName, string date)
+        public DateLocation(string locationName = "", string date = "")
         {
-            this.locationName = locationName;
+            this.LocationName = locationName;
             this.date = date;
+            this.Invitees = 0;
         }
 
         public override string ToString()
         {
-            return locationName + "," + date;
+            return LocationName + "," + date;
         }
+
+        public override bool Equals(object obj)
+        {
+            DateLocation dateLocation = (DateLocation)obj;
+            return (dateLocation != null) && (this.LocationName.Equals(dateLocation.LocationName)) && (this.date.Equals(dateLocation.date));
+        }
+
     }
 
-    [Serializable]
     public class Location
     {
         public string Name { get; set; }
@@ -43,7 +51,7 @@ namespace ClassLibrary
         public override string ToString()
         {
             string roomList = "";
-            foreach(Room room in Rooms)
+            foreach (Room room in Rooms)
             {
                 roomList += room;
             }
@@ -51,21 +59,28 @@ namespace ClassLibrary
         }
     }
 
-    [Serializable]
     public class Room
     {
-        private string name;
-        private int capacity;
+        public enum RoomStatus
+        {
+            NonBooked,
+            Booked,
+        }
 
-        public Room(string name, int capacity)
+        private string name;
+        public int Capacity { get; set; }
+        public RoomStatus RoomAvailability { get; set; }
+
+        public Room(string name, int capacity, RoomStatus roomAvailability)
         {
             this.name = name;
-            this.capacity = capacity;
+            this.Capacity = capacity;
+            this.RoomAvailability = roomAvailability;
         }
 
         public override string ToString()
         {
-            return "(" + "\"" + name + "\", " + capacity + ")";
+            return "(" + "\"" + name + "\", " + Capacity + ")";
         }
     }
 

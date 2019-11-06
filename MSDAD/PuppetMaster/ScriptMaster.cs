@@ -79,9 +79,9 @@ namespace PuppetMaster
         {
             ScriptMaster scriptMaster = new ScriptMaster();
 
-            //string configFilePath = "C:../../config.txt";
+            string configFilePath = "C:../../config.txt";
 
-            string[] lines = System.IO.File.ReadAllLines(@args[0]);
+            string[] lines = System.IO.File.ReadAllLines(configFilePath);
 
             Console.WriteLine("Press s for executing commands sequentially and n for executing step by step");
             string mode = Console.ReadLine();
