@@ -45,13 +45,14 @@ namespace Client
         ///     args[1]->clientUrl
         ///     args[2]->serverUrl
         ///     args[3]->scriptFile
-        ///     args[4:]->otherClientsUrl
+        ///     (optional)
+        ///     args[4:]->otherClientsUrls
         /// </param>
         static void Main(string[] args)
         {
             CClient client;
 
-            // if client isn't started by PuppetMaster, use extra argument to receive other registered clients
+            // without PuppetMaster
             if (args.Length > 4)
             {
                 List<string> otherClientsUrl = new List<string>();
@@ -61,6 +62,7 @@ namespace Client
                 }
                 client = new CClient(args[0], args[1], args[2], otherClientsUrl);
             }
+            // with PuppetMaster
             else
             {
                 client = new CClient(args[0], args[1], args[2]);
