@@ -9,7 +9,6 @@ using System.Collections;
 namespace Server
 {
     public delegate void InvitationDelegate(IClient user, MeetingProposal proposal, string userName);
-    public delegate void InvitationCallbackDelegate();
 
     public class CServer : MarshalByRefObject, IServer
     {     
@@ -228,7 +227,7 @@ namespace Server
 
         public void Status()
         {
-
+            Console.WriteLine("Server is active. URL: {0}", SERVER_URL);
         }
 
         public void ShutDown()
