@@ -6,33 +6,45 @@ using System.Collections.Generic;
 using ClassLibrary;
 using System.Collections;
 using System.Threading;
+using System.Linq;
 
 namespace Server
 {
     public delegate void InvitationDelegate(IClient user, MeetingProposal proposal, string userName);
 
     public class CServer : MarshalByRefObject, IServer
-    {     
-        private Dictionary<string,MeetingProposal> _currentMeetingProposals;
+    {
+        private readonly string SERVER_ID;
+        private readonly string SERVER_URL;
 
-        private List<IServer> _servers;
+        private Dictionary<string,MeetingProposal> _currentMeetingProposals = new Dictionary<string, MeetingProposal>();
 
         // TODO THIS IS JUST TEMPORARY UNTIL PEER TO PEER CLIENT COMMUNICATION
-        private List<IClient> _broadcastClients;
+        private List<IClient> _broadcastClients = new List<IClient>();
 
+        /// <summary>
+        /// string->locationaName Locations->contains Rooms
+        /// </summary>
         private Dictionary<string, Location> _locations = new Dictionary<string, Location>();
 
-        private Dictionary<string, IClient> _clients;
+        private List<IServer> _servers = new List<IServer>();
+
+        /// <summary>
+        /// If client wants to switch server, he can ask the server to provide him with a list of servers' urls
+        /// </summary>
+        private List<string> _serverUrls;
+
+        /// <summary>
+        /// string->username IClient->client remote object
+        /// </summary>
+        private Dictionary<string, IClient> _clients = new Dictionary<string, IClient>();
 
         // to send messages to clients asynchronously, otherwise the loop would deadlock
         private InvitationDelegate _sendInvitationsDelegate;
         private AsyncCallback _sendInvitationsCallbackDelegate;
 
-
-        private readonly string SERVER_ID;
-        private readonly string SERVER_URL;
-
-        public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay, List<string> serverUrls = null, List<string> clientUrls = null)
+        public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay, string roomsFile, List<string> serverUrls = null, List<string> clientUrls = null)
+        //public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay, List<string> locations = null, List<string> serverUrls = null, List<string> clientUrls = null)
         {
             SERVER_ID = serverId;
             SERVER_URL = url;
@@ -42,28 +54,16 @@ namespace Server
 
             // creates the server's remote object
             RemotingServices.Marshal(this, SERVER_ID, typeof(CServer));
-
-            _currentMeetingProposals = new Dictionary<string, MeetingProposal>();
-
-            _clients = new Dictionary<string, IClient>();
-
-            _servers = new List<IServer>();
-            // gets other server's remote objects and saves them
-            if (serverUrls != null)
-            {
-                GetMasterUpdateServers(serverUrls);
-            }
-            // else : the puppet master invokes GetMasterUpdateServers method
-
-            _broadcastClients = new List<IClient>();
-            // gets clients's remote objects and saves them
-            if (clientUrls != null)
-            {
-                GetMasterUpdateClients(clientUrls);
-            }
-            // else : the puppet master invokes GetMasterUpdateClients method
-
             Console.WriteLine("Server created at url: {0}", SERVER_URL);
+
+            RegisterRooms(roomsFile);
+            if (serverUrls != null && clientUrls != null)
+            {
+                // gets other server's remote objects and saves them
+                GetMasterUpdateServers(serverUrls);
+                // gets clients's remote objects and saves them
+                GetMasterUpdateClients(clientUrls);
+            } //else : the puppet master invokes the correspondent update methods
 
             _sendInvitationsDelegate = new InvitationDelegate(SendInvitationToClient);
             _sendInvitationsCallbackDelegate = new AsyncCallback(SendInvitationCallback);
@@ -204,22 +204,56 @@ namespace Server
             Console.WriteLine("finished sending invitation");
         }
 
+        public void RegisterRooms(string fileName)
+        {
+            string[] lines = System.IO.File.ReadAllLines(@fileName);
+
+            // each line has the location and room arguments: locationName roomName capacity
+            foreach (string line in lines)
+            {
+                List<string> args = line.Split().ToList();
+                string locationName = args[0];
+                int capacity = Int32.Parse(args[1]);
+                string roomName = args[2];               
+
+                if (!_locations.ContainsKey(locationName)) {
+                     _locations.Add(locationName, new Location(locationName));
+                }
+
+                _locations[locationName].AddRoom(new Room(roomName, capacity, Room.RoomStatus.NonBooked));
+
+            }
+        }
+
         public void GetMasterUpdateServers(List<string> serverUrls)
         {
+            _serverUrls = serverUrls;
+            Console.WriteLine(_serverUrls.Count());
             Console.WriteLine(" GetMasterUpdateServers");
-            foreach (string url in serverUrls)
+            foreach (string url in _serverUrls)
             {
+                Console.WriteLine("server url: {0}", url);
                 _servers.Add((IServer)Activator.GetObject(typeof(IServer), url));
             }
+            Console.WriteLine("number of servers: {0}", _servers.Count.ToString());
+        }
+
+        public void GetMasterUpdateServer(string url)
+        {
+            Console.WriteLine("server url: {0}", url);
+            _servers.Add((IServer)Activator.GetObject(typeof(IServer), url));
         }
 
         public void GetMasterUpdateClients(List<string> clientUrls)
         {
             Console.WriteLine(" GetMasterUpdateClients");
+            Console.WriteLine("client url 1: {0}", clientUrls[0]);
             foreach (string url in clientUrls)
             {
+                Console.WriteLine("client url: {0}", url);
                 _broadcastClients.Add((IClient)Activator.GetObject(typeof(IClient), url));
             }
+            Console.WriteLine("number of clients: {0}", _broadcastClients.Count.ToString());
         }
 
         public void GetMasterUpdateLocations(Dictionary<string, Location> locations)
@@ -233,6 +267,15 @@ namespace Server
 
         }
 
+        public void AttributeNewServer(string username)
+        {
+            // TODO change method of server selection, for example server with least clients
+            Random randomizer = new Random();
+            int random = randomizer.Next(_serverUrls.Count);
+
+            _clients[username].SwitchServer(_serverUrls[random]);
+        }
+
         public void Status()
         {
             Console.WriteLine("Server is active. URL: {0}", SERVER_URL);
@@ -243,14 +286,14 @@ namespace Server
 
         }
 
-        public void GetRooms()
+        /*public void GetRooms()
         {
             Console.WriteLine("GetRooms()");
             Console.WriteLine("How many rooms: {0}", _locations.Count);
             Console.WriteLine("How many rooms in Lisboa: {0}", _locations["Lisboa"].Rooms.Count);
-            Console.WriteLine(_locations["Lisboa"].Rooms.ToString());
-            Console.WriteLine(_locations["Porto"].Rooms.ToString());
-        }
+            Console.WriteLine(_locations["Lisboa"].Rooms[0].ToString());
+            Console.WriteLine(_locations["Porto"].Rooms[0].ToString());
+        }*/
 
         /// <summary>
         /// 
@@ -261,11 +304,40 @@ namespace Server
         ///     args[2]->maxFaults
         ///     args[3]->minDelay
         ///     args[4]->maxDelay
+        ///     args[5]->roomsFile
+        ///     (optional)
+        ///     args[6]->numServers
+        ///     args[7]->numClients
+        ///     args[8]->serversUrls
+        ///     args[9]->clientUrls
         /// </param>
         static void Main(string[] args) {
 
-            CServer server = new CServer(args[0], args[1], Int32.Parse(args[2]), Int32.Parse(args[3]), Int32.Parse(args[4]));
+            CServer server;
 
+            // without PuppetMaster
+            if (args.Length > 6)
+            {
+                int nServers = Int32.Parse(args[6]);
+                int nClients = Int32.Parse(args[7]);
+                List<string> serversUrl = new List<string>();
+                int i = 6;
+                for (; i < 6 + nServers; i++)
+                {
+                    serversUrl.Add(args[i]);
+                }
+                List<string> clientsUrl = new List<string>();
+                for (; i < nClients; i++)
+                {
+                    clientsUrl.Add(args[i]);
+                }
+                server = new CServer(args[0], args[1], Int32.Parse(args[2]), Int32.Parse(args[3]), Int32.Parse(args[4]), args[5], serversUrl, clientsUrl);
+            }
+            // with PuppetMaster
+            else
+            {
+                server = new CServer(args[0], args[1], Int32.Parse(args[2]), Int32.Parse(args[3]), Int32.Parse(args[4]), args[5]);
+            }
 
             //Thread.Sleep(1000);
 

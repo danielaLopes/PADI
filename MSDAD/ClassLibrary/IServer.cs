@@ -9,12 +9,15 @@ namespace ClassLibrary
     /// </summary>
     public interface IServer : ISystemNode
     {
-        void GetMasterUpdateServers(List<string> serversUrls);
+        // methods to be used by PuppetMaster
+        void GetMasterUpdateServers(List<string> urls);
+        //void GetMasterUpdateServer();
 
-        void GetMasterUpdateClients(List<string> clientUrls);
+        void GetMasterUpdateClients(List<string> urls);
 
         void GetMasterUpdateLocations(Dictionary<string, Location> locations);
 
+        // methods to be used by Clients
         void RegisterUser(string username, string clientUrl);
 
         void Create(MeetingProposal proposal);
@@ -22,7 +25,10 @@ namespace ClassLibrary
         void List(string name, Dictionary<string,MeetingProposal> knownProposals);
 
         void Join(string topic, MeetingRecord record);
+        
         void Close(string topic);
+
+        void AttributeNewServer(string username);
 
     }
 }

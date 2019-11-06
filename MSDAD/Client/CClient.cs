@@ -21,8 +21,6 @@ namespace Client
         // saves the meeting proposal the client knows about (created or received invitation)
         public Dictionary<string, MeetingProposal> _knownMeetingProposals;
 
-        // preferred server
-        private readonly string SERVER_URL;
         // obtain server remote object
         private IServer _remoteServer;
 
@@ -45,16 +43,12 @@ namespace Client
 
             Console.WriteLine("Client registered with username {0} with url {0}.", username, clientUrl);
 
+            RegisterNewServer(serverUrl);
+
             _clients = new List<IClient>();
 
             _knownMeetingProposals = new Dictionary<string, MeetingProposal>();
-
-            SERVER_URL = serverUrl;
-            // retrieve server's proxy
-            _remoteServer = (IServer)Activator.GetObject(typeof(IServer), SERVER_URL);
-            // register new user in remote server
-            _remoteServer.RegisterUser(username, CLIENT_URL);
-
+            
             _clients = new List<IClient>();
 
             // gets other client's remote objects and saves them
@@ -65,6 +59,13 @@ namespace Client
             // else : the puppet master invokes GetMasterUpdateClients method
         }
 
+        public void RegisterNewServer(string serverUrl)
+        {
+            // retrieve server's proxy
+            _remoteServer = (IServer)Activator.GetObject(typeof(IServer), serverUrl);
+            // register new user in remote server
+            _remoteServer.RegisterUser(USERNAME, CLIENT_URL);
+        }
 
         public void List()
         {
@@ -138,6 +139,11 @@ namespace Client
         {
             _knownMeetingProposals = proposals;
 
+        }
+
+        public void SwitchServer(string serverUrl)
+        {
+            RegisterNewServer(serverUrl);
         }
 
         public void GetMasterUpdateClients(List<string> clientsUrls)
