@@ -108,6 +108,7 @@ namespace Server
             _clients[name].UpdateList(proposals);
         }
 
+
         public void Join(string topic, MeetingRecord record)
         {
             MeetingProposal proposal = _currentMeetingProposals[topic];

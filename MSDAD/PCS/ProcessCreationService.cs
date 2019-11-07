@@ -13,6 +13,8 @@ namespace PCS
         private const int PCS_PORT = 10000;
         private const string PCS_NAME = "pcs";
 
+        private bool _hasLocationFile = false;
+
         public ProcessCreationService()
         {
             // creates TCP channel
@@ -29,7 +31,7 @@ namespace PCS
 
         public void RoomsConfigFile(string path, List<string> locations)
         {
-            if (!File.Exists(path))
+            if (_hasLocationFile == false)
             {
                 using (StreamWriter file = new StreamWriter(@path))
                 {
@@ -39,6 +41,7 @@ namespace PCS
                     }
                 }
             }
+            _hasLocationFile = true;
         }
 
         static void Main(string[] args)

@@ -13,6 +13,10 @@ namespace PuppetMaster
 
         // we assume all the AddRoom commands come in the beginning
         private bool _readingLocations = true;
+        // we assume all the Server commands come in second 
+        private bool _readingServers = false;
+        // we assume all the Client commands come in third
+        private bool _readingClients = false;
 
         public ScriptMaster(string[] pcsUrls) : base(pcsUrls) {
             WaitHandles = new List<WaitHandle>();
@@ -74,24 +78,24 @@ namespace PuppetMaster
         {
             Console.WriteLine("sharing master info");
 
-            List<IServer> remoteServers = Servers.Values.ToList();
-            List<IClient> remoteClients = Clients.Values.ToList();
+            List<string> serverUrlsToSend = ServerUrls.ToList();
+            List<string> clientUrlsToSend = ClientUrls.ToList();
 
-            foreach (IServer server in remoteServers)
+            foreach (KeyValuePair<string, IServer> server in Servers)
             {
-                server.GetMasterUpdateServers(ServerUrls);
+                server.Value.GetMasterUpdateServers(serverUrlsToSend);
 
                 // TODO TEMPORARY
-                if (remoteClients.Count() > 0)
+                if (Servers.Count() > 0)
                 {
-                    server.GetMasterUpdateClients(ClientUrls);
+                    server.Value.GetMasterUpdateClients(clientUrlsToSend);
                 }
             }
 
             // TODO DECIDE WHAT CLIENTS THE CLIENT RECEIVES
-            foreach (IClient client in remoteClients)
+            foreach (KeyValuePair<string, IClient> client in Clients)
             {
-                client.GetMasterUpdateClients(ClientUrls);
+                client.Value.GetMasterUpdateClients(clientUrlsToSend);
             }
         }
 
