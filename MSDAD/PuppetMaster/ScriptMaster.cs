@@ -56,6 +56,10 @@ namespace PuppetMaster
                 {
                     Wait(strFields);
                 }
+                else if (command.Equals("Shutdown"))
+                {
+                    ShutDownSystem();
+                }
 
                 if (SendLocationsInfo == true)
                 {
@@ -80,7 +84,7 @@ namespace PuppetMaster
             Console.WriteLine("        Freeze [server_id]");
             Console.WriteLine("        Unfreeze [server_id]");
             Console.WriteLine("        Wait [x_ms]");
-            Console.WriteLine("        Exit");
+            Console.WriteLine("        Shutdown");
         }
 
         public void ShareMasterInfo()
@@ -150,14 +154,12 @@ namespace PuppetMaster
             scriptMaster.PrintGUI();
             // accepts command-line commands
             string command = "";
-            while(!command.Equals("Exit"))
+            while(!command.Equals("Shutdown"))
             {
                 command = Console.ReadLine();
                 
                 scriptMaster.ReceiveCommand(command);
             }
-
-           
         }
     }
 }

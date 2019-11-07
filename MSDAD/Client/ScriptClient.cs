@@ -79,9 +79,15 @@ namespace Client
                 scriptClient.ReceiveCommand(line);
             }
 
-            System.Console.WriteLine("<enter> para sair...");
-            System.Console.ReadLine();
+            System.Console.WriteLine("Enter client commands, enter shutdown to leave");
+            // accepts command-line commands
+            string command = Console.ReadLine();
+            while (!command.Equals("shutdown"))
+            {
+                scriptClient.ReceiveCommand(command);
 
+                command = Console.ReadLine();
+            }
         }
     }
 }
