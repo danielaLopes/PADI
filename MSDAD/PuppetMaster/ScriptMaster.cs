@@ -8,18 +8,12 @@ namespace PuppetMaster
 {
     public class ScriptMaster : MasterAPI
     {
-        public List<WaitHandle> WaitHandles{ get; set; }
         public List<WaitHandle> WaitLocationHandles { get; set; }
 
-        // we assume all the AddRoom commands come in the beginning
-        private bool _readingLocations = true;
-        // we assume all the Server commands come in second 
-        private bool _readingServers = false;
-        // we assume all the Client commands come in third
-        private bool _readingClients = false;
+        // to know when rooms are all created
+        bool SendLocationsInfo = true;
 
         public ScriptMaster(string[] pcsUrls) : base(pcsUrls) {
-            WaitHandles = new List<WaitHandle>();
             WaitLocationHandles = new List<WaitHandle>();
         }
 
@@ -28,50 +22,65 @@ namespace PuppetMaster
             List<string> fields = command.Split().ToList();
             string strFields = command.Remove(0, fields[0].Length);
 
-            if (_readingLocations == true)
+            if (fields[0].Equals("AddRoom"))
             {
-                if (fields[0].Equals("AddRoom"))
-                {
-                    WaitLocationHandles.Add(AddRoom(fields).AsyncWaitHandle);
-                }
-                else
-                {
-                    _readingLocations = false;
-                    while (WaitLocationHandles.Count == 0) { }
-                    WaitHandle.WaitAll(WaitLocationHandles.ToArray());
-                }
+                WaitLocationHandles.Add(AddRoom(fields).AsyncWaitHandle);
             }
-            if (_readingLocations == false)
+            else
             {
                 if (fields[0].Equals("Server"))
                 {
-                    WaitHandles.Add(Server(strFields, fields[1], fields[2]).AsyncWaitHandle);
+                    Server(strFields, fields[1], fields[2]);
                 }
                 else if (fields[0].Equals("Client"))
                 {
-                    WaitHandles.Add(Client(strFields, fields[1], fields[2]).AsyncWaitHandle);
+                    Client(strFields, fields[1], fields[2]);
                 }
-                else if (fields[0].Equals("Status"))
+                else if (command.Equals("Status"))
                 {
-                    Status(strFields);
+                    Status();
                 }
-                else if (fields[0].Equals("Crash"))
+                else if (command.Equals("Crash"))
                 {
                     Crash(strFields);
                 }
-                else if (fields[0].Equals("Freeze"))
+                else if (command.Equals("Freeze"))
                 {
                     Freeze(strFields);
                 }
-                else if (fields[0].Equals("Unfreeze"))
+                else if (command.Equals("Unfreeze"))
                 {
                     Unfreeze(strFields);
                 }
-                else if (fields[0].Equals("Wait"))
+                else if (command.Equals("Wait"))
                 {
                     Wait(strFields);
                 }
-            }         
+
+                if (SendLocationsInfo == true)
+                {
+                    SendLocationsInfo = false;
+
+                    // to garantee locations are all added before creating servers, which will 
+                    // have a file with the locations when they are created
+                    if (WaitLocationHandles.Count > 0)
+                    {
+                        WaitHandle.WaitAll(WaitLocationHandles.ToArray());
+                    }
+                }
+            }
+        }
+
+        public void PrintGUI()
+        {
+            Console.WriteLine("");
+            Console.WriteLine("        PUPPETMASTER commands:");
+            Console.WriteLine("        Status");
+            Console.WriteLine("        Crash [server_id]");
+            Console.WriteLine("        Freeze [server_id]");
+            Console.WriteLine("        Unfreeze [server_id]");
+            Console.WriteLine("        Wait [x_ms]");
+            Console.WriteLine("        Exit");
         }
 
         public void ShareMasterInfo()
@@ -86,7 +95,7 @@ namespace PuppetMaster
                 server.Value.GetMasterUpdateServers(serverUrlsToSend);
 
                 // TODO TEMPORARY
-                if (Servers.Count() > 0)
+                if (Clients.Count() > 0)
                 {
                     server.Value.GetMasterUpdateClients(clientUrlsToSend);
                 }
@@ -137,13 +146,18 @@ namespace PuppetMaster
                     Console.ReadLine(); 
                 }
             }
-            
-            // waits for all servers, clients and rooms to be added before sharing information
-            while(scriptMaster.WaitHandles.Count == 0) {}
-            WaitHandle.WaitAll(scriptMaster.WaitHandles.ToArray());
-            scriptMaster.ShareMasterInfo();
 
-            Console.ReadLine();
+            scriptMaster.PrintGUI();
+            // accepts command-line commands
+            string command = "";
+            while(!command.Equals("Exit"))
+            {
+                command = Console.ReadLine();
+                
+                scriptMaster.ReceiveCommand(command);
+            }
+
+           
         }
     }
 }

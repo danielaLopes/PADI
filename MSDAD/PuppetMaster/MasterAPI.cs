@@ -15,7 +15,7 @@ namespace PuppetMaster
     delegate void ServerDelegate(string fields, string serverId, string url);
     delegate void ClientDelegate(string fields, string username, string url);
     delegate void AddRoomDelegate(List<string> fields);
-    delegate void StatusDelegate(string fields);
+    delegate void StatusDelegate();
     delegate void CrashDelegate(string fields);
     delegate void FreezeDelegate(string fields);
     delegate void UnfreezeDelegate(string fields);
@@ -106,9 +106,9 @@ namespace PuppetMaster
             return _addRoomDelegate.BeginInvoke(fields, null, null);
         }
 
-        public void Status(string fields)
+        public void Status()
         {
-            _statusDelegate.BeginInvoke(fields, null, null);
+            _statusDelegate.BeginInvoke(null, null);
         }
 
         public void Crash(string fields)
@@ -141,7 +141,16 @@ namespace PuppetMaster
         // serverId <=> location
         public void ServerSync(string fields, string serverId, string url)
         {
-            IAsyncResult result = _startServerProcessDelegate.BeginInvoke(url, fields + " " + LOCATIONS_PCS_PATH, null, null);
+            fields += " " + LOCATIONS_PCS_PATH;
+            foreach (string serverUrl in ServerUrls)
+            {
+                fields += " " + serverUrl;
+            }
+            foreach (string clientUrl in ClientUrls)
+            {
+                fields += " " + clientUrl;
+            }
+            IAsyncResult result = _startServerProcessDelegate.BeginInvoke(url, fields, null, null);
             result.AsyncWaitHandle.WaitOne();
             Servers.TryAdd(serverId, (IServer)Activator.GetObject(typeof(IServer), url));
             ServerUrls.Add(url);
@@ -152,6 +161,7 @@ namespace PuppetMaster
         // Client username client URL server URL script file
         public void ClientSync(string fields, string username, string url)
         {
+            // TODO client still does not receive other clients
             IAsyncResult result = _startClientProcessDelegate.BeginInvoke(url, fields, null, null);
             result.AsyncWaitHandle.WaitOne();
             Clients.TryAdd(username, (IClient)Activator.GetObject(typeof(IClient), url));
@@ -194,7 +204,7 @@ namespace PuppetMaster
         }
 
             // Status
-        public void StatusSync(string fields)
+        public void StatusSync()
         {
             WaitHandle[] handles = new WaitHandle[Servers.Count + Clients.Count];
 
