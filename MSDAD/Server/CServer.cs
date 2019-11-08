@@ -496,9 +496,6 @@ namespace Server
             }
 
             //Thread.Sleep(1000);
-
-            //server.GetRooms();
-
             
             System.Console.WriteLine("<enter> para sair...");
 			System.Console.ReadLine();

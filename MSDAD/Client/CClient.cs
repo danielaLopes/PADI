@@ -132,7 +132,7 @@ namespace Client
         public void Wait(string milliseconds)
         {
             Thread.Sleep(Int32.Parse(milliseconds));
-            Console.WriteLine("waited" + milliseconds);
+            Console.WriteLine("waited {0}", milliseconds);
         }
 
         public void UpdateList(Dictionary<string, MeetingProposal> proposals)
