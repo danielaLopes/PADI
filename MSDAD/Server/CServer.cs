@@ -203,7 +203,7 @@ namespace Server
                 {
                     if (username != proposal.Coordinator)
                     {
-                        IClient invitee = _clients[username];
+                        IClient invitee = _broadcastClients[username];
                         _sendInvitationsDelegate.BeginInvoke(invitee, proposal, username, SendInvitationCallback, null);
                     }
                 }

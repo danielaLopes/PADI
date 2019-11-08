@@ -3,4 +3,4 @@ AddRoom Porto 4 sala-douro
 Server server-1 tcp://localhost:9898/server-1 1 1 1
 Server server-2 tcp://localhost:9797/server-2 1 1 1
 Client joao tcp://localhost:9091/joao tcp://localhost:9898/server-1 C:../../../Client/clientCommandsJoao.txt
-Client maria tcp://localhost:9090/maria tcp://localhost:9898/server-1 C:../../../Client/clientCommandsMaria.txt
+Client maria tcp://localhost:9090/maria tcp://localhost:9797/server-2 C:../../../Client/clientCommandsMaria.txt
