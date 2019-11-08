@@ -48,13 +48,11 @@ namespace Client
             _clients = new List<IClient>();
 
             _knownMeetingProposals = new Dictionary<string, MeetingProposal>();
-            
-            _clients = new List<IClient>();
 
             // gets other client's remote objects and saves them
             if (clientsUrls != null)
             {
-                GetMasterUpdateClients(clientsUrls);
+                UpdateClients(clientsUrls);
             }
             // else : the puppet master invokes GetMasterUpdateClients method
         }
@@ -90,7 +88,7 @@ namespace Client
                 Invitees = parsedInvitees,
                 Records = new List<MeetingRecord>(),
                 Participants = new List<string>(),
-                MeetingStatus = MeetingStatus.Open
+                MeetingStatus = MeetingStatus.OPEN
 
             };
             _remoteServer.Create(proposal);
@@ -113,12 +111,12 @@ namespace Client
         {
             if (_knownMeetingProposals.ContainsKey(meetingTopic))
             {
-                //Console.WriteLine("hello im joining");
                 List<DateLocation> parsedSlots = ParseSlots(slots);
                 MeetingRecord record = new MeetingRecord
                 {
                     Name = USERNAME,
-                    DateLocationSlots = parsedSlots
+                    DateLocationSlots = parsedSlots,
+                    RecordStatus = RecordStatus.UNKNOWN
                 };
                 _remoteServer.Join(meetingTopic, record);
             }
@@ -146,7 +144,7 @@ namespace Client
             RegisterNewServer(serverUrl);
         }
 
-        public void GetMasterUpdateClients(List<string> clientsUrls)
+        public void UpdateClients(List<string> clientsUrls)
         {
             foreach (string url in clientsUrls)
             {

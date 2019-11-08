@@ -9,8 +9,7 @@ using PCS;
 
 namespace PuppetMaster
 {
-    delegate void StartServerProcessDelegate(string pcsBaseUrl, string fields);
-    delegate void StartClientProcessDelegate(string pcsBaseUrl, string fields);
+    delegate void StartProcessDelegate(string pcsBaseUrl, string fields, string exePath);
 
     delegate void ServerDelegate(string fields, string serverId, string url);
     delegate void ClientDelegate(string fields, string username, string url);
@@ -41,12 +40,10 @@ namespace PuppetMaster
         /// </summary>
         public ConcurrentDictionary<string, ProcessCreationService> PCSs { get; set; }
 
-        //public Dictionary<string, Location> Locations { get; set; }
         public List<string> _locationsText = new List<string>();
-        public const string LOCATIONS_PCS_PATH = @"..\..\..\Server\locationsConfig.txt";
+        public const string LOCATIONS_PCS_PATH = @"..\..\..\Server\rooMConfig.txt";
 
-        private StartServerProcessDelegate _startServerProcessDelegate;
-        private StartClientProcessDelegate _startClientProcessDelegate;
+        private StartProcessDelegate _startProcessDelegate;
 
         private ServerDelegate _serverDelegate;
         private ClientDelegate _clientDelegate;
@@ -74,8 +71,7 @@ namespace PuppetMaster
                 PCSs.TryAdd(BaseUrlExtractor.Extract(url), (ProcessCreationService)Activator.GetObject(typeof(ProcessCreationService), url));
             }
 
-            _startServerProcessDelegate = new StartServerProcessDelegate(StartServerProcess);
-            _startClientProcessDelegate = new StartClientProcessDelegate(StartClientProcess);
+            _startProcessDelegate = new StartProcessDelegate(StartProcess);
 
             _serverDelegate = new ServerDelegate(ServerSync);
             _clientDelegate = new ClientDelegate(ClientSync);
@@ -93,7 +89,7 @@ namespace PuppetMaster
 
         public IAsyncResult Server(string fields, string serverId, string url)
         {
-            return _serverDelegate.BeginInvoke(fields,serverId, url, null, null);
+            return _serverDelegate.BeginInvoke(fields, serverId, url, null, null);
         }
 
         public IAsyncResult Client(string fields, string username, string url)
@@ -142,21 +138,32 @@ namespace PuppetMaster
         public void ServerSync(string fields, string serverId, string url)
         {
             fields += " " + LOCATIONS_PCS_PATH;
-            /*foreach (string serverUrl in ServerUrls)
+            // sends server pre-existing servers' urls as part of the arguments
+            /*if (ServerUrls.Count > 0)
             {
-                fields += " " + serverUrl;
+                fields += " " + ServerUrls.Count.ToString();
+                foreach (string serverUrl in ServerUrls)
+                {
+                    fields += " " + serverUrl;
+                }
             }
-            foreach (string clientUrl in ClientUrls)
-            {
-                fields += " " + clientUrl;
-            }*/
-            IAsyncResult result = _startServerProcessDelegate.BeginInvoke(url, fields, null, null);
+
+            Console.WriteLine("Server args {0}", fields);*/
+
+            IAsyncResult result = _startProcessDelegate.BeginInvoke(url, fields, @"..\..\..\Server\bin\Debug\Server.exe", null, null);
             result.AsyncWaitHandle.WaitOne();
 
             UpdateServerInfo(url);
 
             // TODO SEE IF TRYADD IS PROBLEMATIC
-            Servers.TryAdd(serverId, (IServer)Activator.GetObject(typeof(IServer), url));
+            if (Servers.TryAdd(serverId, (IServer)Activator.GetObject(typeof(IServer), url)))
+            {
+                Console.WriteLine("Successfully added Server {0}", url);
+            }
+            else
+            {
+                Console.WriteLine("Could not add Server {0}", url);
+            }
             ServerUrls.Add(url); 
 
             Console.WriteLine("Server {0} created!", serverId);
@@ -166,7 +173,7 @@ namespace PuppetMaster
         public void ClientSync(string fields, string username, string url)
         {
             // TODO client still does not receive other clients
-            IAsyncResult result = _startClientProcessDelegate.BeginInvoke(url, fields, null, null);
+            IAsyncResult result = _startProcessDelegate.BeginInvoke(url, fields, @"..\..\..\Client\bin\Debug\Client.exe", null, null);
             result.AsyncWaitHandle.WaitOne();
 
             UpdateClientInfo(url);
@@ -178,28 +185,19 @@ namespace PuppetMaster
             Console.WriteLine("Client {0} created!", username);
         }
 
-        public void StartServerProcess(string url, string fields)
+        public void StartProcess(string url, string fields, string exePath)
         {
             // match right PCS
             string basePcsUrl = BaseUrlExtractor.Extract(url);
             ProcessCreationService pcs = PCSs[basePcsUrl];
-            pcs.RoomsConfigFile(LOCATIONS_PCS_PATH, _locationsText);
-            pcs.Start(@"..\..\..\Server\bin\Debug\Server.exe", fields);
-        }
-
-        public void StartClientProcess(string url, string fields)
-        {
-            // match right PCS
-            string basePcsUrl = BaseUrlExtractor.Extract(url);
-            ProcessCreationService pcs = PCSs[basePcsUrl];
-            pcs.Start(@"..\..\..\Client\bin\Debug\Client.exe", fields);
+            pcs.Start(@exePath, fields);
         }
 
         public void UpdateServerInfo(string newServerUrl)
         {
             foreach (KeyValuePair<string, IServer> server in Servers)
             {
-                server.Value.UpdateServer(newServerUrl);
+                server.Value.UpdateServerAndSpread(newServerUrl);
             }
         }
 
@@ -208,6 +206,13 @@ namespace PuppetMaster
             foreach (KeyValuePair<string, IServer> server in Servers)
             {
                 server.Value.UpdateClient(newClientUrl);
+            }
+        }
+
+        public void SpreadLocationsFile()
+        {
+            foreach (KeyValuePair<string, ProcessCreationService> pcs in PCSs) {
+                pcs.Value.RoomsConfigFile(LOCATIONS_PCS_PATH, _locationsText);
             }
         }
 
