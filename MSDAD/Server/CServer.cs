@@ -15,7 +15,8 @@ namespace Server
     public delegate void InvitationDelegate(IClient user, MeetingProposal proposal, string userName);
 
     public delegate void BroadcastNewMeetingDelegate(IServer server, MeetingProposal proposal);
-    public delegate void BroadcastUpdateMeetingDelegate(IServer server, MeetingProposal proposal);
+    public delegate void BroadcastJoinDelegate(IServer server, string username, MeetingProposal proposal, MeetingRecord record);
+    public delegate void BroadcastCloseDelegate(IServer server, MeetingProposal proposal);
     public delegate void BroadcastUpdateLocationDelegate(IServer server, Location location);
 
     public class CServer : MarshalByRefObject, IServer
@@ -48,7 +49,8 @@ namespace Server
         private InvitationDelegate _sendInvitationsDelegate;
 
         private BroadcastNewMeetingDelegate _broadcastNewMeetingDelegate;
-        private BroadcastUpdateMeetingDelegate _broadcastUpdateMeetingDelegate;
+        private BroadcastJoinDelegate _broadcastJoinDelegate;
+        private BroadcastCloseDelegate _broadcastCloseDelegate;
         private BroadcastUpdateLocationDelegate _broadcastUpdateLocationDelegate;
 
         public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay, string roomsFile, List<string> serverUrls = null, List<string> clientUrls = null)
@@ -81,7 +83,8 @@ namespace Server
             _sendInvitationsDelegate = new InvitationDelegate(SendInvitationToClient);
 
             _broadcastNewMeetingDelegate = new BroadcastNewMeetingDelegate(BroadcastNewMeetingToServer);
-            _broadcastUpdateMeetingDelegate = new BroadcastUpdateMeetingDelegate(BroadcastUpdateMeetingToServer);
+            _broadcastJoinDelegate = new BroadcastJoinDelegate(BroadcastJoinToServer);
+            _broadcastCloseDelegate = new BroadcastCloseDelegate(BroadcastCloseToServer);
             _broadcastUpdateLocationDelegate = new BroadcastUpdateLocationDelegate(BroadcastUpdateLocationToServer);
         }
 
@@ -142,8 +145,11 @@ namespace Server
                 if (proposal.MeetingStatus.Equals(MeetingStatus.CLOSED) ||
                         proposal.MeetingStatus.Equals(MeetingStatus.CANCELLED))
                 {
-                    record.RecordStatus = RecordStatus.FAILED;
-                    proposal.AddFailedRecord(record);
+                    if (!proposal.FailedRecords.Contains(record))
+                    {
+                        proposal.AddFailedRecord(record);
+                        BroadcastJoin(username, proposal);
+                    }
                 }
                 else
                 {
@@ -158,9 +164,9 @@ namespace Server
                         }
                     }
                     proposal.AddMeetingRecord(record);
+                    BroadcastJoin(username, proposal);
                 }
                 Console.WriteLine(record.Name + " joined meeting proposal " + proposal.Topic + ".");
-                BroadcastUpdateMeeting(proposal);
             }
         }
 
@@ -240,7 +246,7 @@ namespace Server
             }
             Console.WriteLine(proposal.Coordinator + " closed meeting proposal " + proposal.Topic + ".");
 
-            BroadcastUpdateMeeting(proposal);
+            BroadcastClose(proposal);
         }
 
         public void SendAllInvitations(MeetingProposal proposal)
@@ -325,30 +331,67 @@ namespace Server
             }
         }
 
-        public void BroadcastUpdateMeeting(MeetingProposal proposal)
+        public void BroadcastJoin(string username, MeetingProposal proposal)
         {
             foreach (KeyValuePair<string, IServer> server in _servers)
             {
-                _broadcastUpdateMeetingDelegate.BeginInvoke(server.Value, proposal, BroadcastUpdateMeetingCallback, null);
-                //_broadcastCloseDelegate.BeginInvoke(server, topic, record, null, null);
+                _broadcastCloseDelegate.BeginInvoke(server.Value, proposal, null, null);
             }
         }
 
-        public void BroadcastUpdateMeetingToServer(IServer server, MeetingProposal proposal)
+        public void BroadcastJoinToServer(IServer server, string username, MeetingProposal proposal, MeetingRecord record)
         {
-            Console.WriteLine("going to send update {0}", proposal.Topic);
-            server.ReceiveUpdateMeeting(proposal);
+            Console.WriteLine("going to send join {0}", proposal.Topic);
+            server.ReceiveJoin(username, proposal, record);
         }
 
-        public void BroadcastUpdateMeetingCallback(IAsyncResult res)
+        /*public void BroadcastJoinCallback(IAsyncResult res)
         {
-            _broadcastUpdateMeetingDelegate.EndInvoke(res);
-            Console.WriteLine("finished sending update");
+            _broadcastJoinDelegate.EndInvoke(res);
+            Console.WriteLine("finished sending join");
+        }*/
+
+        public void ReceiveJoin(string username, MeetingProposal proposal, MeetingRecord record)
+        {
+            Console.WriteLine("received join {0}", proposal.Topic);
+
+            MeetingProposal previousProposal;
+            if (_currentMeetingProposals.TryGetValue(proposal.Topic, out previousProposal))
+            {
+                if (previousProposal.MeetingStatus == MeetingStatus.CLOSED)
+                {
+                    Join(username, proposal.Topic, record);
+                } 
+            }
+            else
+            {
+                _currentMeetingProposals[proposal.Topic] = proposal;
+            }
         }
 
-        public void ReceiveUpdateMeeting(MeetingProposal proposal)
+        public void BroadcastClose(MeetingProposal proposal)
         {
-            Console.WriteLine("received update {0}", proposal.Topic);
+            foreach (KeyValuePair<string, IServer> server in _servers)
+            {
+                _broadcastCloseDelegate.BeginInvoke(server.Value, proposal, BroadcastCloseCallback, null);
+            }
+        }
+
+        public void BroadcastCloseToServer(IServer server, MeetingProposal proposal)
+        {
+            Console.WriteLine("going to send close {0}", proposal.Topic);
+            server.ReceiveClose(proposal);
+        }
+
+        public void BroadcastCloseCallback(IAsyncResult res)
+        {
+            _broadcastCloseDelegate.EndInvoke(res);
+            Console.WriteLine("finished sending close");
+        }
+
+        public void ReceiveClose(MeetingProposal proposal)
+        {
+            Console.WriteLine("received close {0}", proposal.Topic);
             _currentMeetingProposals[proposal.Topic] = proposal;
         }
 

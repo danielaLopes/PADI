@@ -32,7 +32,9 @@ namespace ClassLibrary
         // methods to be used by other servers
         void ReceiveNewMeeting(MeetingProposal meeting);
 
-        void ReceiveUpdateMeeting(MeetingProposal proposal);
+        void ReceiveJoin(string username, MeetingProposal proposal, MeetingRecord record);
+
+        void ReceiveClose(MeetingProposal proposal);
 
         void ReceiveUpdateLocation(Location location);
 

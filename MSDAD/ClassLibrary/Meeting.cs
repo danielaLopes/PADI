@@ -89,20 +89,11 @@ namespace ClassLibrary
         }
     }
 
-    public enum RecordStatus
-    {
-        ACCEPTED,
-        FAILED, // Join came after Close
-        UNKNOWN // Before reaching the server, it's the server that attributes a known Status
-
-    }
-
     [Serializable]
     public class MeetingRecord
     {
         public string Name { get; set; }
         public List<DateLocation> DateLocationSlots { get; set; }
-        public RecordStatus RecordStatus { get; set; }
 
         public override string ToString()
         {

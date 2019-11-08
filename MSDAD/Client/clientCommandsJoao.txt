@@ -1,5 +1,8 @@
-wait 3000
-list
-join ola Lisboa,2020-01-02
-wait 4000
+wait 10000
+create adeus 1 2 4 Lisboa,2020-01-02 Lisboa,2010-01-03 maria joao jola jolina
+wait 1000
+join adeus Lisboa,2020-01-02
+wait 1000
+close adeus
+wait 1000
 list
