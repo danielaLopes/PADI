@@ -12,6 +12,7 @@ namespace Server
 {
     public delegate void InvitationDelegate(IClient user, MeetingProposal proposal, string userName);
     public delegate void BroadcastNewMeetingDelegate(IServer user, MeetingProposal proposal);
+    public delegate void BroadcastJoinDelegate(IServer user, string topic, MeetingRecord record);
 
     public class CServer : MarshalByRefObject, IServer
     {
@@ -47,6 +48,9 @@ namespace Server
         private BroadcastNewMeetingDelegate _broadcastNewMeetingDelegate;
         private AsyncCallback _broadcastNewMeetingCallback;
 
+        private BroadcastJoinDelegate _broadcastJoinDelegate;
+        private AsyncCallback _broadcastJoinCallback;
+
         public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay, string roomsFile, List<string> serverUrls = null, List<string> clientUrls = null)
         //public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay, List<string> locations = null, List<string> serverUrls = null, List<string> clientUrls = null)
         {
@@ -61,10 +65,14 @@ namespace Server
             Console.WriteLine("Server created at url: {0}", SERVER_URL);
 
             RegisterRooms(roomsFile);
-            if (serverUrls != null && clientUrls != null)
+            
+            if (serverUrls != null)
             {
                 // gets other server's remote objects and saves them
                 UpdateServers(serverUrls);
+            } //else : the puppet master invokes the correspondent update methods
+            if (clientUrls != null)
+            {  
                 // gets clients's remote objects and saves them
                 UpdateClients(clientUrls);
             } //else : the puppet master invokes the correspondent update methods
@@ -74,6 +82,9 @@ namespace Server
 
             _broadcastNewMeetingDelegate = new BroadcastNewMeetingDelegate(BroadcastNewMeetingToServer);
             _broadcastNewMeetingCallback = new AsyncCallback(BroadcastNewMeetingCallback);
+
+            _broadcastJoinDelegate = new BroadcastJoinDelegate(BroadcastJoinToServer);
+            //_broadcastJoinCallback = new AsyncCallback(BroadcastJoinCallback);
         }
 
         public void RegisterUser(string username, string clientUrl) 
@@ -126,6 +137,7 @@ namespace Server
 
             proposal.Records.Add(record);
             Console.WriteLine(record.Name + " joined meeting proposal " + proposal.Topic + ".");
+            BroadcastJoin(topic, record);
         }
 
         public void Close(string topic)
@@ -230,11 +242,37 @@ namespace Server
             Console.WriteLine("finished sending new meeting");
         }
 
-        // TODO CAUSALITY!
         public void ReceiveNewMeeting(MeetingProposal meeting)
         {
             Console.WriteLine("received new meeting {0}", meeting.Topic);
             _currentMeetingProposals.Add(meeting.Topic, meeting);
+        }
+
+        public void BroadcastJoin(string topic, MeetingRecord record)
+        {
+            foreach (IServer server in _servers)
+            {
+                //_broadcastJoinDelegate.BeginInvoke(server, topic, record, BroadcastJoinCallback, null);
+                _broadcastJoinDelegate.BeginInvoke(server, topic, record, null, null);
+            }
+        }
+
+        public void BroadcastJoinToServer(IServer server, string topic, MeetingRecord record)
+        {
+            Console.WriteLine("going to send join {0}", topic);
+            server.ReceiveJoin(topic, record);
+        }
+
+        /*public void BroadcastJoinCallback(IAsyncResult res)
+        {
+            _broadcastJoinDelegate.EndInvoke(res);
+            Console.WriteLine("finished sending join");
+        }*/
+
+        public void ReceiveJoin(string topic, MeetingRecord record)
+        {
+            Console.WriteLine("received join {0}", topic);
+            _currentMeetingProposals[topic].AddMeetingRecord(record);
         }
 
         public void RegisterRooms(string fileName)
@@ -266,10 +304,23 @@ namespace Server
             }
         }
 
-        public void UpdateServer(string serverUrl)
+        public void UpdateServerAndSpread(string serverUrl)
         {
+            Console.WriteLine("Updating server and spread {0}", serverUrl);
+
+            IServer server = UpdateServer(serverUrl);
+            server.UpdateServer(SERVER_URL);
+        }
+
+        public IServer UpdateServer(string serverUrl)
+        {
+            Console.WriteLine("Updating server {0}", serverUrl);
+
             _serverUrls.Add(serverUrl);
-            _servers.Add((IServer)Activator.GetObject(typeof(IServer), serverUrl));
+            IServer server = (IServer)Activator.GetObject(typeof(IServer), serverUrl);
+            _servers.Add(server);
+
+            return server;
         }
 
         public void UpdateClients(List<string> clientUrls)
@@ -305,15 +356,6 @@ namespace Server
 
         }
 
-        /*public void GetRooms()
-        {
-            Console.WriteLine("GetRooms()");
-            Console.WriteLine("How many rooms: {0}", _locations.Count);
-            Console.WriteLine("How many rooms in Lisboa: {0}", _locations["Lisboa"].Rooms.Count);
-            Console.WriteLine(_locations["Lisboa"].Rooms[0].ToString());
-            Console.WriteLine(_locations["Porto"].Rooms[0].ToString());
-        }*/
-
         /// <summary>
         /// 
         /// </summary>
@@ -339,18 +381,28 @@ namespace Server
             {
                 int nServers = Int32.Parse(args[6]);
                 int nClients = Int32.Parse(args[7]);
+
                 List<string> serversUrl = new List<string>();
                 int i = 6;
                 for (; i < 6 + nServers; i++)
                 {
                     serversUrl.Add(args[i]);
                 }
-                List<string> clientsUrl = new List<string>();
-                for (; i < nClients; i++)
+
+                if (nClients > 0)
                 {
-                    clientsUrl.Add(args[i]);
+                    List<string> clientsUrl = new List<string>();
+                    for (; i < nClients; i++)
+                    {
+                        clientsUrl.Add(args[i]);
+                    }
+                    server = new CServer(args[0], args[1], Int32.Parse(args[2]), Int32.Parse(args[3]), Int32.Parse(args[4]), args[5], serversUrl, clientsUrl);
                 }
-                server = new CServer(args[0], args[1], Int32.Parse(args[2]), Int32.Parse(args[3]), Int32.Parse(args[4]), args[5], serversUrl, clientsUrl);
+                else
+                {
+                    server = new CServer(args[0], args[1], Int32.Parse(args[2]), Int32.Parse(args[3]), Int32.Parse(args[4]), args[5], serversUrl, null);
+                }
+                
             }
             // with PuppetMaster
             else

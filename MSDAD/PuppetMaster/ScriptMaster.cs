@@ -9,12 +9,16 @@ namespace PuppetMaster
     public class ScriptMaster : MasterAPI
     {
         public List<WaitHandle> WaitLocationHandles { get; set; }
+        public List<WaitHandle> WaitServerHandles { get; set; }
 
         // to know when rooms are all created
         bool SendLocationsInfo = true;
+        // to know when all servers are created
+        bool WaitServersCreation = true;
 
         public ScriptMaster(string[] pcsUrls) : base(pcsUrls) {
             WaitLocationHandles = new List<WaitHandle>();
+            WaitServerHandles = new List<WaitHandle>();
         }
 
         public void ReceiveCommand(string command)
@@ -30,10 +34,16 @@ namespace PuppetMaster
             {
                 if (fields[0].Equals("Server"))
                 {
-                    Server(strFields, fields[1], fields[2]);
+                    WaitServerHandles.Add(Server(strFields, fields[1], fields[2]).AsyncWaitHandle);
                 }
                 else if (fields[0].Equals("Client"))
                 {
+                    // only starts creating clients when all server are created
+                    if (WaitServersCreation == true)
+                    {
+                        WaitHandle.WaitAll(WaitServerHandles.ToArray());
+                        WaitServersCreation = false;
+                    }
                     Client(strFields, fields[1], fields[2]);
                 }
                 else if (command.Equals("Status"))
@@ -70,6 +80,7 @@ namespace PuppetMaster
                     if (WaitLocationHandles.Count > 0)
                     {
                         WaitHandle.WaitAll(WaitLocationHandles.ToArray());
+                        SpreadLocationsFile();
                     }
                 }
             }
