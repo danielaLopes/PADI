@@ -7,9 +7,9 @@ namespace ClassLibrary
 {
     public enum MeetingStatus
     {
-        Open,
-        Cancelled,
-        Closed
+        OPEN,
+        CANCELLED, // not enough space in rooms
+        CLOSED
     }
 
     [Serializable]
@@ -21,6 +21,10 @@ namespace ClassLibrary
         public List<DateLocation> DateLocationSlots { get; set; }
         public List<string> Invitees { get; set; }
         public List<MeetingRecord> Records { get; set; }
+        // Maintains info on records that failed due to concurrent join and closes
+        public List<MeetingRecord> FailedRecords { get; set; }
+        // Maintains info on records that failed due to not enough participants' slots
+        public List<MeetingRecord> FullRecords { get; set; }
         public MeetingStatus MeetingStatus { get; set; }
         public List<string> Participants { get; set; }
         public DateLocation FinalDateLocation { get; set; }
@@ -28,6 +32,16 @@ namespace ClassLibrary
         public void AddMeetingRecord(MeetingRecord record)
         {
             Records.Add(record);
+        }
+
+        public void AddFailedRecord(MeetingRecord record)
+        {
+            FailedRecords.Add(record);
+        }
+
+        public void AddFullRecord(MeetingRecord record)
+        {
+            FullRecords.Add(record);
         }
 
         public override bool Equals(object obj)
@@ -44,7 +58,7 @@ namespace ClassLibrary
         // TODO : e preciiso imprimir mais coisas????
         public override string ToString()
         {
-            if (MeetingStatus == MeetingStatus.Closed)
+            if (MeetingStatus == MeetingStatus.CLOSED)
             {
                 string participants = "";
                 foreach (string part in Participants)
@@ -63,17 +77,24 @@ namespace ClassLibrary
         }
     }
 
+    public enum RecordStatus
+    {
+        ACCEPTED,
+        FAILED, // Join came after Close
+        UNKNOWN // Before reaching the server, it's the server that attributes a known Status
+
+    }
+
     [Serializable]
     public class MeetingRecord
     {
         public string Name { get; set; }
         public List<DateLocation> DateLocationSlots { get; set; }
+        public RecordStatus RecordStatus { get; set; }
 
         public override string ToString()
         {
             return Name + " " + DateLocationSlots;
         }
-
-
     }
 }

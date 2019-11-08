@@ -11,8 +11,10 @@ using System.Linq;
 namespace Server
 {
     public delegate void InvitationDelegate(IClient user, MeetingProposal proposal, string userName);
+
     public delegate void BroadcastNewMeetingDelegate(IServer user, MeetingProposal proposal);
     public delegate void BroadcastJoinDelegate(IServer user, string topic, MeetingRecord record);
+    public delegate void BroadcastCloseDelegate(IServer user, string topic, MeetingRecord record);
 
     public class CServer : MarshalByRefObject, IServer
     {
@@ -51,6 +53,9 @@ namespace Server
         private BroadcastJoinDelegate _broadcastJoinDelegate;
         private AsyncCallback _broadcastJoinCallback;
 
+        private BroadcastCloseDelegate _broadcastCloseDelegate;
+        private AsyncCallback _broadcastCloseCallback;
+
         public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay, string roomsFile, List<string> serverUrls = null, List<string> clientUrls = null)
         //public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay, List<string> locations = null, List<string> serverUrls = null, List<string> clientUrls = null)
         {
@@ -85,6 +90,9 @@ namespace Server
 
             _broadcastJoinDelegate = new BroadcastJoinDelegate(BroadcastJoinToServer);
             //_broadcastJoinCallback = new AsyncCallback(BroadcastJoinCallback);
+
+            _broadcastCloseDelegate = new BroadcastCloseDelegate(BroadcastCloseToServer);
+            //_broadcastCloseCallback = new AsyncCallback(BroadcastCloseCallback);
         }
 
         public void RegisterUser(string username, string clientUrl) 
@@ -124,18 +132,28 @@ namespace Server
         {
             MeetingProposal proposal = _currentMeetingProposals[topic];
 
-            foreach (DateLocation date1 in proposal.DateLocationSlots)
+            // Checks if the join arrived after the meeting is closed, in that 
+            // case it maintains a record with a special status, FAILED
+            if (proposal.MeetingStatus.Equals(MeetingStatus.CLOSED) || 
+                    proposal.MeetingStatus.Equals(MeetingStatus.CANCELLED))
             {
-                foreach (DateLocation date2 in record.DateLocationSlots)
+                record.RecordStatus = RecordStatus.FAILED;
+                proposal.AddFailedRecord(record);
+            }
+            else
+            {
+                foreach (DateLocation date1 in proposal.DateLocationSlots)
                 {
-                    if (date1.Equals(date2))
+                    foreach (DateLocation date2 in record.DateLocationSlots)
                     {
-                        date1.Invitees++;
+                        if (date1.Equals(date2))
+                        {
+                            date1.Invitees++;
+                        }
                     }
                 }
+                proposal.AddMeetingRecord(record);
             }
-
-            proposal.Records.Add(record);
             Console.WriteLine(record.Name + " joined meeting proposal " + proposal.Topic + ".");
             BroadcastJoin(topic, record);
         }
@@ -169,11 +187,11 @@ namespace Server
 
             if (finalDateLocation.Invitees < proposal.MinAttendees)// || possibleRooms.Count == 0)
             {
-                proposal.MeetingStatus = MeetingStatus.Cancelled;
+                proposal.MeetingStatus = MeetingStatus.CANCELLED;
             }
             else
             {
-                proposal.MeetingStatus = MeetingStatus.Closed;
+                proposal.MeetingStatus = MeetingStatus.CLOSED;
 
                 proposal.FinalDateLocation = finalDateLocation;
                 foreach (MeetingRecord record in proposal.Records)
@@ -272,6 +290,33 @@ namespace Server
         public void ReceiveJoin(string topic, MeetingRecord record)
         {
             Console.WriteLine("received join {0}", topic);
+            _currentMeetingProposals[topic].AddMeetingRecord(record);
+        }
+
+        public void BroadcastClose(string topic, MeetingRecord record)
+        {
+            foreach (IServer server in _servers)
+            {
+                //_broadcastJoinDelegate.BeginInvoke(server, topic, record, BroadcastJoinCallback, null);
+                _broadcastCloseDelegate.BeginInvoke(server, topic, record, null, null);
+            }
+        }
+
+        public void BroadcastCloseToServer(IServer server, string topic, MeetingRecord record)
+        {
+            Console.WriteLine("going to send close {0}", topic);
+            server.ReceiveJoin(topic, record);
+        }
+
+        /*public void BroadcastCloseCallback(IAsyncResult res)
+        {
+            _broadcastJoinDelegate.EndInvoke(res);
+            Console.WriteLine("finished sending close");
+        }*/
+
+        public void ReceiveClose(string topic, MeetingRecord record)
+        {
+            Console.WriteLine("received close {0}", topic);
             _currentMeetingProposals[topic].AddMeetingRecord(record);
         }
 

@@ -88,7 +88,7 @@ namespace Client
                 Invitees = parsedInvitees,
                 Records = new List<MeetingRecord>(),
                 Participants = new List<string>(),
-                MeetingStatus = MeetingStatus.Open
+                MeetingStatus = MeetingStatus.OPEN
 
             };
             _remoteServer.Create(proposal);
@@ -115,7 +115,8 @@ namespace Client
                 MeetingRecord record = new MeetingRecord
                 {
                     Name = USERNAME,
-                    DateLocationSlots = parsedSlots
+                    DateLocationSlots = parsedSlots,
+                    RecordStatus = RecordStatus.UNKNOWN
                 };
                 _remoteServer.Join(meetingTopic, record);
             }
