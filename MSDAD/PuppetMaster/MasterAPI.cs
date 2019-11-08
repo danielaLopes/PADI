@@ -56,7 +56,8 @@ namespace PuppetMaster
         private ShutDownSystemDelegate _shutDownSystemDelegate;
 
         private CheckNodeStatus _checkNodeStatusDelegate;
-        private AsyncCallback _checkNodeCallbackDelegate;
+
+        private int _nodesCreated;
 
         public MasterAPI(string[] pcsUrls)
         {
@@ -84,16 +85,19 @@ namespace PuppetMaster
             _shutDownSystemDelegate = new ShutDownSystemDelegate(ShutDownSystemSync);
 
             _checkNodeStatusDelegate = new CheckNodeStatus(CheckNode);
-            _checkNodeCallbackDelegate = new AsyncCallback(CheckNodeCallback);
+
+            _nodesCreated = 0;
         }
 
         public IAsyncResult Server(string fields, string serverId, string url)
         {
+            _nodesCreated++;
             return _serverDelegate.BeginInvoke(fields, serverId, url, null, null);
         }
 
         public IAsyncResult Client(string fields, string username, string url)
         {
+            _nodesCreated++;
             return _clientDelegate.BeginInvoke(fields, username, url, null, null);
         }
 
@@ -234,7 +238,13 @@ namespace PuppetMaster
             // Status
         public void StatusSync()
         {
-            WaitHandle[] handles = new WaitHandle[Servers.Count + Clients.Count];
+            // we only want to check nodes after they are created
+            while((Servers.Count + Clients.Count) < _nodesCreated)
+            {
+                Thread.Sleep(500);
+            }
+
+            WaitHandle[] handles = new WaitHandle[_nodesCreated];
 
             lock (Servers)
             {
