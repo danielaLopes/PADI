@@ -23,7 +23,7 @@ namespace ClassLibrary
 
         void List(string name, Dictionary<string,MeetingProposal> knownProposals);
 
-        void Join(string topic, MeetingRecord record);
+        void Join(string username, string topic, MeetingRecord record);
         
         void Close(string topic);
 

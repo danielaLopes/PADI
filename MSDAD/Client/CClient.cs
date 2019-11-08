@@ -120,7 +120,7 @@ namespace Client
                     DateLocationSlots = parsedSlots,
                     RecordStatus = RecordStatus.UNKNOWN
                 };
-                _remoteServer.Join(meetingTopic, record);
+                _remoteServer.Join(USERNAME, meetingTopic, record);
             }
         }
 
