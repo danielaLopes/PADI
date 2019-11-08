@@ -307,7 +307,10 @@ namespace PuppetMaster
 
         public void ShutDownSystemSync()
         {
+            foreach (KeyValuePair<string, ProcessCreationService> pcs in PCSs)
+                pcs.Value.ShutDownAll();
 
+            Environment.Exit(0);
         }
     }
 }

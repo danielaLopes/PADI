@@ -118,7 +118,6 @@ namespace Client
                 {
                     Name = USERNAME,
                     DateLocationSlots = parsedSlots,
-                    RecordStatus = RecordStatus.UNKNOWN
                 };
                 _remoteServer.Join(USERNAME, meetingTopic, record);
             }

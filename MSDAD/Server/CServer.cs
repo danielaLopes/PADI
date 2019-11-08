@@ -274,6 +274,7 @@ namespace Server
                         IClient invitee = _broadcastClients[username];
                         _sendInvitationsDelegate.BeginInvoke(invitee, proposal, username, SendInvitationCallback, null);
 
+                        Console.WriteLine("Sent invitation to user {0}", username);
                         // CHECK IF BROADCAST CLIENTS CONTAIS ALL INVITEES
                         // IF NOT, CHANGE USER SERVER
                     }

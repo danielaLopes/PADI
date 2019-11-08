@@ -140,7 +140,7 @@ namespace PuppetMaster
             scriptMaster.PrintGUI();
             // accepts command-line commands
             string command = "";
-            while(!command.Equals("Shutdown"))
+            while(true)
             {
                 command = Console.ReadLine();
                 
