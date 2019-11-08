@@ -55,6 +55,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="commands.txt" />
+    <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ClassLibrary\ClassLibrary.csproj">
