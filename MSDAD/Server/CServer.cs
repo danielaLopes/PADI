@@ -32,12 +32,10 @@ namespace Server
         /// </summary> 
         private ConcurrentDictionary<string, Location> _locations = new ConcurrentDictionary<string, Location>();
 
-        private List<IServer> _servers = new List<IServer>();
-
         /// <summary>
         /// If client wants to switch server, he can ask the server to provide him with a list of servers' urls
         /// </summary>
-        private List<string> _serverUrls = new List<string>();
+        private ConcurrentDictionary<string, IServer> _servers = new ConcurrentDictionary<string, IServer>();
 
         /// <summary>
         /// string->username IClient->client remote object
@@ -78,10 +76,10 @@ namespace Server
             } //else : the puppet master invokes the correspondent update methods
 
             _sendAllInvitationsDelegate = new SendAllInvitationsDelegate(SendAllInvitations);
-
             _sendInvitationsDelegate = new InvitationDelegate(SendInvitationToClient);
 
             _broadcastNewMeetingDelegate = new BroadcastNewMeetingDelegate(BroadcastNewMeetingToServer);
+            _broadcastUpdateMeetingDelegate = new BroadcastUpdateMeetingDelegate(BroadcastUpdateMeetingToServer);
         }
 
         public void RegisterUser(string username, string clientUrl) 
@@ -126,36 +124,41 @@ namespace Server
             _clients[name].UpdateList(proposals);
         }
 
-
-        public void Join(string topic, MeetingRecord record)
+        public void Join(string username, string topic, MeetingRecord record)
         {
-            MeetingProposal proposal = _currentMeetingProposals[topic];
-
-            // Checks if the join arrived after the meeting is closed, in that 
-            // case it maintains a record with a special status, FAILED
-            if (proposal.MeetingStatus.Equals(MeetingStatus.CLOSED) || 
-                    proposal.MeetingStatus.Equals(MeetingStatus.CANCELLED))
+            MeetingProposal proposal;
+            if (!_currentMeetingProposals.TryGetValue(topic, out proposal))
             {
-                record.RecordStatus = RecordStatus.FAILED;
-                proposal.AddFailedRecord(record);
+                // if the server does not have a meeting, he tells the client to switch to a different server
+                AttributeNewServer(username);
             }
             else
             {
-                foreach (DateLocation date1 in proposal.DateLocationSlots)
+                // Checks if the join arrived after the meeting is closed, in that 
+                // case it maintains a record with a special status, FAILED
+                if (proposal.MeetingStatus.Equals(MeetingStatus.CLOSED) ||
+                        proposal.MeetingStatus.Equals(MeetingStatus.CANCELLED))
                 {
-                    foreach (DateLocation date2 in record.DateLocationSlots)
+                    record.RecordStatus = RecordStatus.FAILED;
+                    proposal.AddFailedRecord(record);
+                }
+                else
+                {
+                    foreach (DateLocation date1 in proposal.DateLocationSlots)
                     {
-                        if (date1.Equals(date2))
+                        foreach (DateLocation date2 in record.DateLocationSlots)
                         {
-                            Console.WriteLine("adding invitees {0}", date1.ToString());
-                            date1.Invitees++;
+                            if (date1.Equals(date2))
+                            {
+                                date1.Invitees++;
+                            }
                         }
                     }
+                    proposal.AddMeetingRecord(record);
                 }
-                proposal.AddMeetingRecord(record);
+                Console.WriteLine(record.Name + " joined meeting proposal " + proposal.Topic + ".");
+                BroadcastUpdateMeeting(proposal);
             }
-            Console.WriteLine(record.Name + " joined meeting proposal " + proposal.Topic + ".");
-            BroadcastUpdateMeeting(proposal);
         }
 
         public void Close(string topic)
@@ -165,14 +168,12 @@ namespace Server
             DateLocation finalDateLocation = new DateLocation();
             foreach (DateLocation dateLocation in proposal.DateLocationSlots)
             {
-                Console.WriteLine("chegou {0}", dateLocation);
                 if (dateLocation.Invitees > finalDateLocation.Invitees)
                 {
                     
                     finalDateLocation = dateLocation;
                 }
             }
-            Console.WriteLine(finalDateLocation.ToString());
             Location location = _locations[finalDateLocation.LocationName];
             SortedDictionary<int, Room> possibleRooms = new SortedDictionary<int, Room>();
             int maxCapacity = 0;
@@ -288,9 +289,9 @@ namespace Server
 
         public void BroadcastNewMeeting(MeetingProposal proposal)
         {
-            foreach (IServer server in _servers)
+            foreach (KeyValuePair<string, IServer> server in _servers)
             {
-                _broadcastNewMeetingDelegate.BeginInvoke(server, proposal, BroadcastNewMeetingCallback, null);
+                _broadcastNewMeetingDelegate.BeginInvoke(server.Value, proposal, BroadcastNewMeetingCallback, null);
             }
         }
 
@@ -320,9 +321,9 @@ namespace Server
 
         public void BroadcastUpdateMeeting(MeetingProposal proposal)
         {
-            foreach (IServer server in _servers)
+            foreach (KeyValuePair<string, IServer> server in _servers)
             {
-                _broadcastUpdateMeetingDelegate.BeginInvoke(server, proposal, BroadcastUpdateMeetingCallback, null);
+                _broadcastUpdateMeetingDelegate.BeginInvoke(server.Value, proposal, BroadcastUpdateMeetingCallback, null);
                 //_broadcastCloseDelegate.BeginInvoke(server, topic, record, null, null);
             }
         }
@@ -375,9 +376,9 @@ namespace Server
 
         public void UpdateServers(List<string> serverUrls)
         {
-            foreach (string url in _serverUrls)
+            foreach (KeyValuePair<string, IServer> server in _servers)
             {
-                UpdateServer(url);
+                UpdateServer(server.Key);
             }
         }
 
@@ -393,9 +394,8 @@ namespace Server
         {
             Console.WriteLine("Updating server {0}", serverUrl);
 
-            _serverUrls.Add(serverUrl);
             IServer server = (IServer)Activator.GetObject(typeof(IServer), serverUrl);
-            _servers.Add(server);
+            _servers.TryAdd(serverUrl, server);
 
             return server;
         }
@@ -425,9 +425,10 @@ namespace Server
         {
             // TODO change method of server selection, for example server with least clients
             Random randomizer = new Random();
-            int random = randomizer.Next(_serverUrls.Count);
+            int random = randomizer.Next(_servers.Count);
 
-            _clients[username].SwitchServer(_serverUrls[random]);
+            List<string> urls = _servers.Keys.ToList();
+            _clients[username].SwitchServer(urls[random]);
         }
 
         public void Status()
