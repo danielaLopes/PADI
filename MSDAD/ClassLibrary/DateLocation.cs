@@ -35,25 +35,25 @@ namespace ClassLibrary
     public class Location
     {
         public string Name { get; set; }
-        public List<Room> Rooms { get; set; }
+        public Dictionary<string,Room> Rooms { get; set; }
 
         public Location(string name)
         {
             Name = name;
-            Rooms = new List<Room>();
+            Rooms = new Dictionary<string, Room>();
         }
 
         public void AddRoom(Room room)
         {
-            Rooms.Add(room);
+            Rooms.Add(room.Name, room);
         }
 
         public override string ToString()
         {
             string roomList = "";
-            foreach (Room room in Rooms)
+            foreach (KeyValuePair<string,Room> room in Rooms)
             {
-                roomList += room;
+                roomList += room.Value;
             }
             return Name + " " + roomList;
         }
@@ -68,20 +68,20 @@ namespace ClassLibrary
             BOOKED,
         }
 
-        private string name;
+        public string Name { get; set; }
         public int Capacity { get; set; }
         public RoomStatus RoomAvailability { get; set; }
 
         public Room(string name, int capacity, RoomStatus roomAvailability)
         {
-            this.name = name;
+            this.Name = name;
             this.Capacity = capacity;
             this.RoomAvailability = roomAvailability;
         }
 
         public override string ToString()
         {
-            return "(" + "\"" + name + "\", " + Capacity + ")";
+            return "(" + "\"" + Name + "\", " + Capacity + ")";
         }
     }
 

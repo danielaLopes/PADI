@@ -1,7 +1,8 @@
-AddRoom Lisboa 3 sala-tejo
+AddRoom Lisboa 2 sala-tejo
 AddRoom Porto 4 sala-douro
-Server 123 tcp://localhost:9898/123 1 1 1
-Client joao tcp://localhost:9091/joao tcp://localhost:9898/123 C:../../../Client/clientCommandsJoao.txt
-Client maria tcp://localhost:9090/maria tcp://localhost:9898/123 C:../../../Client/clientCommandsMaria.txt
-Client jola tcp://localhost:9092/jola tcp://localhost:9898/123 C:../../../Client/clientCommands.txt
-Client jolina tcp://localhost:9093/jolina tcp://localhost:9898/123 C:../../../Client/clientCommands.txt
+Server 1 tcp://localhost:9898/1 1 1 1
+Server 2 tcp://localhost:9899/2 1 1 1
+Client joao tcp://localhost:9091/joao tcp://localhost:9898/1 C:../../../Client/clientCommandsJoao.txt
+Client maria tcp://localhost:9090/maria tcp://localhost:9899/2 C:../../../Client/clientCommandsMaria.txt
+Client jola tcp://localhost:9092/jola tcp://localhost:9898/1 C:../../../Client/clientCommands.txt
+Client jolina tcp://localhost:9093/jolina tcp://localhost:9899/2 C:../../../Client/clientCommands.txt

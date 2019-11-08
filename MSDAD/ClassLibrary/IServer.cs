@@ -34,5 +34,7 @@ namespace ClassLibrary
 
         void ReceiveUpdateMeeting(MeetingProposal proposal);
 
+        void ReceiveUpdateLocation(Location location);
+
     }
 }

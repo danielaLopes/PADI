@@ -16,6 +16,7 @@ namespace Server
 
     public delegate void BroadcastNewMeetingDelegate(IServer server, MeetingProposal proposal);
     public delegate void BroadcastUpdateMeetingDelegate(IServer server, MeetingProposal proposal);
+    public delegate void BroadcastUpdateLocationDelegate(IServer server, Location location);
 
     public class CServer : MarshalByRefObject, IServer
     {
@@ -48,6 +49,7 @@ namespace Server
 
         private BroadcastNewMeetingDelegate _broadcastNewMeetingDelegate;
         private BroadcastUpdateMeetingDelegate _broadcastUpdateMeetingDelegate;
+        private BroadcastUpdateLocationDelegate _broadcastUpdateLocationDelegate;
 
         public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay, string roomsFile, List<string> serverUrls = null, List<string> clientUrls = null)
         //public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay, List<string> locations = null, List<string> serverUrls = null, List<string> clientUrls = null)
@@ -80,6 +82,7 @@ namespace Server
 
             _broadcastNewMeetingDelegate = new BroadcastNewMeetingDelegate(BroadcastNewMeetingToServer);
             _broadcastUpdateMeetingDelegate = new BroadcastUpdateMeetingDelegate(BroadcastUpdateMeetingToServer);
+            _broadcastUpdateLocationDelegate = new BroadcastUpdateLocationDelegate(BroadcastUpdateLocationToServer);
         }
 
         public void RegisterUser(string username, string clientUrl) 
@@ -177,17 +180,17 @@ namespace Server
             Location location = _locations[finalDateLocation.LocationName];
             SortedDictionary<int, Room> possibleRooms = new SortedDictionary<int, Room>();
             int maxCapacity = 0;
-            foreach (Room room in location.Rooms)
+            foreach (KeyValuePair<string,Room> room in location.Rooms)
             {
-
-                if (room.RoomAvailability == Room.RoomStatus.NONBOOKED)
+                Console.WriteLine(room.Value.RoomAvailability);
+                if (room.Value.RoomAvailability == Room.RoomStatus.NONBOOKED)
                 {
-                    possibleRooms.Add(room.Capacity, room);
+                    possibleRooms.Add(room.Value.Capacity, room.Value);
 
-                    if (maxCapacity < room.Capacity) maxCapacity = room.Capacity;
+                    if (maxCapacity < room.Value.Capacity) maxCapacity = room.Value.Capacity;
                 }
             }
-            if (maxCapacity < finalDateLocation.Invitees)
+            if (maxCapacity < finalDateLocation.Invitees && possibleRooms.Count != 0)
             {
                 proposal.FinalRoom = possibleRooms[maxCapacity];
             }
@@ -212,7 +215,10 @@ namespace Server
             {
                 int countInvitees = 0;
                 proposal.MeetingStatus = MeetingStatus.CLOSED;
-                proposal.FinalRoom.RoomAvailability = Room.RoomStatus.BOOKED;
+                _locations[finalDateLocation.LocationName].Rooms[proposal.FinalRoom.Name].RoomAvailability = Room.RoomStatus.BOOKED;
+
+                BroadcastUpdateLocation(location);
+
                 proposal.FinalDateLocation = finalDateLocation;
                 foreach (KeyValuePair<string, MeetingRecord> record in proposal.Records)
                 {
@@ -344,6 +350,32 @@ namespace Server
         {
             Console.WriteLine("received update {0}", proposal.Topic);
             _currentMeetingProposals[proposal.Topic] = proposal;
+        }
+
+        public void BroadcastUpdateLocation(Location location)
+        {
+            foreach (KeyValuePair<string, IServer> server in _servers)
+            {
+                _broadcastUpdateLocationDelegate.BeginInvoke(server.Value, location, BroadcastUpdateLocationCallback, null);
+            }
+        }
+
+        public void BroadcastUpdateLocationToServer(IServer server, Location location)
+        {
+            Console.WriteLine("going to send updated location {0}", location.Name);
+            server.ReceiveUpdateLocation(location);
+        }
+
+        public void BroadcastUpdateLocationCallback(IAsyncResult res)
+        {
+            _broadcastUpdateLocationDelegate.EndInvoke(res);
+            Console.WriteLine("finished sending update");
+        }
+
+        public void ReceiveUpdateLocation(Location location)
+        {
+            Console.WriteLine("received updated location {0}", location.Name);
+            _locations[location.Name] = location;
         }
 
         public void RegisterRooms(string fileName)
