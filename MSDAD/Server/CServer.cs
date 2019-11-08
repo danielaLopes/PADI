@@ -7,9 +7,11 @@ using ClassLibrary;
 using System.Collections;
 using System.Threading;
 using System.Linq;
+using System.Collections.Concurrent;
 
 namespace Server
 {
+    public delegate void SendAllInvitationsDelegate(MeetingProposal proposal);
     public delegate void InvitationDelegate(IClient user, MeetingProposal proposal, string userName);
 
     public delegate void BroadcastNewMeetingDelegate(IServer user, MeetingProposal proposal);
@@ -21,15 +23,15 @@ namespace Server
         private readonly string SERVER_ID;
         private readonly string SERVER_URL;
 
-        private Dictionary<string,MeetingProposal> _currentMeetingProposals = new Dictionary<string, MeetingProposal>();
+        private ConcurrentDictionary<string, MeetingProposal> _currentMeetingProposals = new ConcurrentDictionary<string, MeetingProposal>();
 
         // TODO THIS IS JUST TEMPORARY UNTIL PEER TO PEER CLIENT COMMUNICATION
-        private Dictionary<string, IClient> _broadcastClients = new Dictionary<string, IClient>();
+        private ConcurrentDictionary<string, IClient> _broadcastClients = new ConcurrentDictionary<string, IClient>();
 
         /// <summary>
         /// string->locationaName Locations->contains Rooms
-        /// </summary>
-        private Dictionary<string, Location> _locations = new Dictionary<string, Location>();
+        /// </summary> 
+        private ConcurrentDictionary<string, Location> _locations = new ConcurrentDictionary<string, Location>();
 
         private List<IServer> _servers = new List<IServer>();
 
@@ -41,20 +43,16 @@ namespace Server
         /// <summary>
         /// string->username IClient->client remote object
         /// </summary>
-        private Dictionary<string, IClient> _clients = new Dictionary<string, IClient>();
+        private ConcurrentDictionary<string, IClient> _clients = new ConcurrentDictionary<string, IClient>();
 
         // to send messages to clients asynchronously, otherwise the loop would deadlock
+        private SendAllInvitationsDelegate _sendAllInvitationsDelegate;
         private InvitationDelegate _sendInvitationsDelegate;
-        private AsyncCallback _sendInvitationsCallbackDelegate;
-
         private BroadcastNewMeetingDelegate _broadcastNewMeetingDelegate;
-        private AsyncCallback _broadcastNewMeetingCallback;
 
         private BroadcastJoinDelegate _broadcastJoinDelegate;
-        private AsyncCallback _broadcastJoinCallback;
 
         private BroadcastCloseDelegate _broadcastCloseDelegate;
-        private AsyncCallback _broadcastCloseCallback;
 
         public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay, string roomsFile, List<string> serverUrls = null, List<string> clientUrls = null)
         //public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay, List<string> locations = null, List<string> serverUrls = null, List<string> clientUrls = null)
@@ -82,34 +80,42 @@ namespace Server
                 UpdateClients(clientUrls);
             } //else : the puppet master invokes the correspondent update methods
 
+            _sendAllInvitationsDelegate = new SendAllInvitationsDelegate(SendAllInvitations);
+
             _sendInvitationsDelegate = new InvitationDelegate(SendInvitationToClient);
-            _sendInvitationsCallbackDelegate = new AsyncCallback(SendInvitationCallback);
 
             _broadcastNewMeetingDelegate = new BroadcastNewMeetingDelegate(BroadcastNewMeetingToServer);
-            _broadcastNewMeetingCallback = new AsyncCallback(BroadcastNewMeetingCallback);
 
             _broadcastJoinDelegate = new BroadcastJoinDelegate(BroadcastJoinToServer);
-            //_broadcastJoinCallback = new AsyncCallback(BroadcastJoinCallback);
 
             _broadcastCloseDelegate = new BroadcastCloseDelegate(BroadcastCloseToServer);
-            //_broadcastCloseCallback = new AsyncCallback(BroadcastCloseCallback);
         }
 
         public void RegisterUser(string username, string clientUrl) 
         {
             // obtain client remote object
-            _clients.Add(username, (IClient)Activator.GetObject(typeof(IClient), clientUrl));
-
-            Console.WriteLine("New user {0} with url {0} registered.", username, clientUrl);
+            if (_clients.TryAdd(username, (IClient)Activator.GetObject(typeof(IClient), clientUrl)))
+            {
+                Console.WriteLine("New user {0} with url {0} registered.", username, clientUrl);
+            }
+            else
+            {
+                Console.WriteLine("not possible to register user {0} with URL: {1}. Try again", username, clientUrl);
+            }
         }
 
         public void Create(MeetingProposal proposal)
         {
-            _currentMeetingProposals.Add(proposal.Topic, proposal);
-
-            Console.WriteLine("Created new meeting proposal for " + proposal.Topic + ".");
-            SendAllInvitations(proposal);
-            BroadcastNewMeeting(proposal);
+            if (_currentMeetingProposals.TryAdd(proposal.Topic, proposal))
+            {
+                Console.WriteLine("Created new meeting proposal for " + proposal.Topic + ".");
+                _sendAllInvitationsDelegate.BeginInvoke(proposal, SendAllInvitationsCallback, null);
+                BroadcastNewMeeting(proposal);
+            }
+            else
+            {
+                Console.WriteLine("Not possible to create meeting with topic {0}", proposal.Topic);
+            }
         }
 
         public void List(string name, Dictionary<string,MeetingProposal> knownProposals)
@@ -212,7 +218,7 @@ namespace Server
             {
                 foreach (KeyValuePair<string, IClient> client in _broadcastClients)
                 {
-                    _sendInvitationsDelegate.BeginInvoke(client.Value, proposal, client.Key, SendInvitationCallback, null); 
+                    _sendInvitationsDelegate.BeginInvoke(client.Value, proposal, client.Key, SendInvitationCallback, null);
                 }
             }
             else
@@ -221,8 +227,17 @@ namespace Server
                 {
                     if (username != proposal.Coordinator)
                     {
+                        while (!_broadcastClients.ContainsKey(username))
+                        {
+                            Console.WriteLine("user {0} not present. going to wait", username);
+                            Thread.Sleep(500);
+                        }
+
                         IClient invitee = _broadcastClients[username];
                         _sendInvitationsDelegate.BeginInvoke(invitee, proposal, username, SendInvitationCallback, null);
+
+                        // CHECK IF BROADCAST CLIENTS CONTAIS ALL INVITEES
+                        // IF NOT, CHANGE USER SERVER
                     }
                 }
             }
@@ -232,6 +247,12 @@ namespace Server
         {
             Console.WriteLine("going to send invitation to {0}", username);
             user.ReceiveInvitation(proposal);
+        }
+
+        public void SendAllInvitationsCallback(IAsyncResult res)
+        {
+            _sendAllInvitationsDelegate.EndInvoke(res);
+            Console.WriteLine("finished sending all invitations");
         }
 
         public void SendInvitationCallback(IAsyncResult res)
@@ -262,8 +283,14 @@ namespace Server
 
         public void ReceiveNewMeeting(MeetingProposal meeting)
         {
-            Console.WriteLine("received new meeting {0}", meeting.Topic);
-            _currentMeetingProposals.Add(meeting.Topic, meeting);
+            if (_currentMeetingProposals.TryAdd(meeting.Topic, meeting))
+            {
+                Console.WriteLine("received new meeting {0}", meeting.Topic);
+            }
+            else
+            {
+                Console.WriteLine("not possible to receive new meeting {0}", meeting.Topic);
+            }
         }
 
         public void BroadcastJoin(string topic, MeetingRecord record)
@@ -333,7 +360,14 @@ namespace Server
                 string roomName = args[2];               
 
                 if (!_locations.ContainsKey(locationName)) {
-                     _locations.Add(locationName, new Location(locationName));
+                    if (_locations.TryAdd(locationName, new Location(locationName)))
+                    {
+                        Console.WriteLine("added new location {0}", locationName);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Not possible to add location {0}", locationName);
+                    }
                 }
 
                 _locations[locationName].AddRoom(new Room(roomName, capacity, Room.RoomStatus.NonBooked));
@@ -379,7 +413,14 @@ namespace Server
         public void UpdateClient(string clientUrl)
         {
             string clientName = clientUrl.Split('/').ToList()[3];
-            _broadcastClients.Add(clientName, (IClient)Activator.GetObject(typeof(IClient), clientUrl));
+            if (_broadcastClients.TryAdd(clientName, (IClient)Activator.GetObject(typeof(IClient), clientUrl)))
+            {
+                Console.WriteLine("added client {0} to broadcastClients", clientName);
+            }
+            else
+            {
+                Console.WriteLine("Not possible to add client {0} to broadcasteClient", clientName);
+            }
         }
 
         public void AttributeNewServer(string username)
