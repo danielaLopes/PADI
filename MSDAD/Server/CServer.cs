@@ -33,7 +33,7 @@ namespace Server
         /// <summary>
         /// If client wants to switch server, he can ask the server to provide him with a list of servers' urls
         /// </summary>
-        private List<string> _serverUrls;
+        private List<string> _serverUrls = new List<string>();
 
         /// <summary>
         /// string->username IClient->client remote object
@@ -64,9 +64,9 @@ namespace Server
             if (serverUrls != null && clientUrls != null)
             {
                 // gets other server's remote objects and saves them
-                GetMasterUpdateServers(serverUrls);
+                UpdateServers(serverUrls);
                 // gets clients's remote objects and saves them
-                GetMasterUpdateClients(clientUrls);
+                UpdateClients(clientUrls);
             } //else : the puppet master invokes the correspondent update methods
 
             _sendInvitationsDelegate = new InvitationDelegate(SendInvitationToClient);
@@ -258,33 +258,32 @@ namespace Server
             }
         }
 
-        public void GetMasterUpdateServers(List<string> serverUrls)
+        public void UpdateServers(List<string> serverUrls)
         {
-            _serverUrls = serverUrls;
-
             foreach (string url in _serverUrls)
             {
-                // does not add this server
-                if (!url.Equals(SERVER_URL))
-                {
-                    _servers.Add((IServer)Activator.GetObject(typeof(IServer), url));
-                }
+                UpdateServer(url);
             }
         }
 
-        public void GetMasterUpdateServer(string url)
+        public void UpdateServer(string serverUrl)
         {
-            _servers.Add((IServer)Activator.GetObject(typeof(IServer), url));
+            _serverUrls.Add(serverUrl);
+            _servers.Add((IServer)Activator.GetObject(typeof(IServer), serverUrl));
         }
 
-        public void GetMasterUpdateClients(List<string> clientUrls)
+        public void UpdateClients(List<string> clientUrls)
         {
             foreach (string url in clientUrls)
             {
-                // TODO TEMPORARY
-                string clientName = url.Split('/').ToList()[3];
-                _broadcastClients.Add(clientName, (IClient)Activator.GetObject(typeof(IClient), url));
+                UpdateClient(url);
             }
+        }
+
+        public void UpdateClient(string clientUrl)
+        {
+            string clientName = clientUrl.Split('/').ToList()[3];
+            _broadcastClients.Add(clientName, (IClient)Activator.GetObject(typeof(IClient), clientUrl));
         }
 
         public void AttributeNewServer(string username)

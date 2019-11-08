@@ -142,18 +142,22 @@ namespace PuppetMaster
         public void ServerSync(string fields, string serverId, string url)
         {
             fields += " " + LOCATIONS_PCS_PATH;
-            foreach (string serverUrl in ServerUrls)
+            /*foreach (string serverUrl in ServerUrls)
             {
                 fields += " " + serverUrl;
             }
             foreach (string clientUrl in ClientUrls)
             {
                 fields += " " + clientUrl;
-            }
+            }*/
             IAsyncResult result = _startServerProcessDelegate.BeginInvoke(url, fields, null, null);
             result.AsyncWaitHandle.WaitOne();
+
+            UpdateServerInfo(url);
+
+            // TODO SEE IF TRYADD IS PROBLEMATIC
             Servers.TryAdd(serverId, (IServer)Activator.GetObject(typeof(IServer), url));
-            ServerUrls.Add(url);
+            ServerUrls.Add(url); 
 
             Console.WriteLine("Server {0} created!", serverId);
         }
@@ -164,6 +168,10 @@ namespace PuppetMaster
             // TODO client still does not receive other clients
             IAsyncResult result = _startClientProcessDelegate.BeginInvoke(url, fields, null, null);
             result.AsyncWaitHandle.WaitOne();
+
+            UpdateClientInfo(url);
+
+            // TODO SEE IF TRYADD IS PROBLEMATIC
             Clients.TryAdd(username, (IClient)Activator.GetObject(typeof(IClient), url));
             ClientUrls.Add(url);
 
@@ -185,7 +193,22 @@ namespace PuppetMaster
             string basePcsUrl = BaseUrlExtractor.Extract(url);
             ProcessCreationService pcs = PCSs[basePcsUrl];
             pcs.Start(@"..\..\..\Client\bin\Debug\Client.exe", fields);
+        }
 
+        public void UpdateServerInfo(string newServerUrl)
+        {
+            foreach (KeyValuePair<string, IServer> server in Servers)
+            {
+                server.Value.UpdateServer(newServerUrl);
+            }
+        }
+
+        public void UpdateClientInfo(string newClientUrl)
+        {
+            foreach (KeyValuePair<string, IServer> server in Servers)
+            {
+                server.Value.UpdateClient(newClientUrl);
+            }
         }
 
         // AddRoom location capacity room name

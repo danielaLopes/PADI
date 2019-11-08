@@ -87,31 +87,6 @@ namespace PuppetMaster
             Console.WriteLine("        Shutdown");
         }
 
-        public void ShareMasterInfo()
-        {
-            Console.WriteLine("sharing master info");
-
-            List<string> serverUrlsToSend = ServerUrls.ToList();
-            List<string> clientUrlsToSend = ClientUrls.ToList();
-
-            foreach (KeyValuePair<string, IServer> server in Servers)
-            {
-                server.Value.GetMasterUpdateServers(serverUrlsToSend);
-
-                // TODO TEMPORARY
-                if (Clients.Count() > 0)
-                {
-                    server.Value.GetMasterUpdateClients(clientUrlsToSend);
-                }
-            }
-
-            // TODO DECIDE WHAT CLIENTS THE CLIENT RECEIVES
-            foreach (KeyValuePair<string, IClient> client in Clients)
-            {
-                client.Value.GetMasterUpdateClients(clientUrlsToSend);
-            }
-        }
-
         /// <summary>
         /// 
         /// </summary>

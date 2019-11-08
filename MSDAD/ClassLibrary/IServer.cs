@@ -10,9 +10,9 @@ namespace ClassLibrary
     public interface IServer : ISystemNode
     {
         // methods to be used by PuppetMaster
-        void GetMasterUpdateServers(List<string> urls);
+        void UpdateServer(string url);
 
-        void GetMasterUpdateClients(List<string> urls);
+        void UpdateClient(string url);
 
         // methods to be used by Clients
         void RegisterUser(string username, string clientUrl);
