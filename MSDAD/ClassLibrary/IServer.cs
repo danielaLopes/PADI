@@ -32,7 +32,7 @@ namespace ClassLibrary
         // methods to be used by other servers
         void ReceiveNewMeeting(MeetingProposal meeting);
 
-        void ReceiveJoin(string topic, MeetingRecord record);
+        void ReceiveUpdateMeeting(MeetingProposal proposal);
 
     }
 }

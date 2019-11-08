@@ -14,9 +14,8 @@ namespace Server
     public delegate void SendAllInvitationsDelegate(MeetingProposal proposal);
     public delegate void InvitationDelegate(IClient user, MeetingProposal proposal, string userName);
 
-    public delegate void BroadcastNewMeetingDelegate(IServer user, MeetingProposal proposal);
-    public delegate void BroadcastJoinDelegate(IServer user, string topic, MeetingRecord record);
-    public delegate void BroadcastCloseDelegate(IServer user, string topic, MeetingRecord record);
+    public delegate void BroadcastNewMeetingDelegate(IServer server, MeetingProposal proposal);
+    public delegate void BroadcastUpdateMeetingDelegate(IServer server, MeetingProposal proposal);
 
     public class CServer : MarshalByRefObject, IServer
     {
@@ -48,11 +47,9 @@ namespace Server
         // to send messages to clients asynchronously, otherwise the loop would deadlock
         private SendAllInvitationsDelegate _sendAllInvitationsDelegate;
         private InvitationDelegate _sendInvitationsDelegate;
+
         private BroadcastNewMeetingDelegate _broadcastNewMeetingDelegate;
-
-        private BroadcastJoinDelegate _broadcastJoinDelegate;
-
-        private BroadcastCloseDelegate _broadcastCloseDelegate;
+        private BroadcastUpdateMeetingDelegate _broadcastUpdateMeetingDelegate;
 
         public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay, string roomsFile, List<string> serverUrls = null, List<string> clientUrls = null)
         //public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay, List<string> locations = null, List<string> serverUrls = null, List<string> clientUrls = null)
@@ -85,10 +82,6 @@ namespace Server
             _sendInvitationsDelegate = new InvitationDelegate(SendInvitationToClient);
 
             _broadcastNewMeetingDelegate = new BroadcastNewMeetingDelegate(BroadcastNewMeetingToServer);
-
-            _broadcastJoinDelegate = new BroadcastJoinDelegate(BroadcastJoinToServer);
-
-            _broadcastCloseDelegate = new BroadcastCloseDelegate(BroadcastCloseToServer);
         }
 
         public void RegisterUser(string username, string clientUrl) 
@@ -154,6 +147,7 @@ namespace Server
                     {
                         if (date1.Equals(date2))
                         {
+                            Console.WriteLine("adding invitees {0}", date1.ToString());
                             date1.Invitees++;
                         }
                     }
@@ -161,7 +155,7 @@ namespace Server
                 proposal.AddMeetingRecord(record);
             }
             Console.WriteLine(record.Name + " joined meeting proposal " + proposal.Topic + ".");
-            BroadcastJoin(topic, record);
+            BroadcastUpdateMeeting(proposal);
         }
 
         public void Close(string topic)
@@ -171,44 +165,75 @@ namespace Server
             DateLocation finalDateLocation = new DateLocation();
             foreach (DateLocation dateLocation in proposal.DateLocationSlots)
             {
-
+                Console.WriteLine("chegou {0}", dateLocation);
                 if (dateLocation.Invitees > finalDateLocation.Invitees)
                 {
+                    
                     finalDateLocation = dateLocation;
                 }
             }
-
-            /*Location location = _locations[finalDateLocation.LocationName];
-            //<Room> possibleRooms = new List<Room>();
+            Console.WriteLine(finalDateLocation.ToString());
+            Location location = _locations[finalDateLocation.LocationName];
             SortedDictionary<int, Room> possibleRooms = new SortedDictionary<int, Room>();
-
+            int maxCapacity = 0;
             foreach (Room room in location.Rooms)
             {
 
-                if (room.RoomAvailability == Room.RoomStatus.NonBooked )//&& room.Capacity >= finalDateLocation.Invitees)
+                if (room.RoomAvailability == Room.RoomStatus.NONBOOKED)
                 {
                     possibleRooms.Add(room.Capacity, room);
-                }
-            }*/
 
-            if (finalDateLocation.Invitees < proposal.MinAttendees)// || possibleRooms.Count == 0)
+                    if (maxCapacity < room.Capacity) maxCapacity = room.Capacity;
+                }
+            }
+            if (maxCapacity < finalDateLocation.Invitees)
+            {
+                proposal.FinalRoom = possibleRooms[maxCapacity];
+            }
+
+            else
+            {
+                foreach (KeyValuePair<int, Room> room in possibleRooms)
+                {
+                    if (room.Key >= finalDateLocation.Invitees)
+                    {
+                        proposal.FinalRoom = room.Value;
+                        break;
+                    }
+                }
+            }
+
+            if (finalDateLocation.Invitees < proposal.MinAttendees || possibleRooms.Count == 0)
             {
                 proposal.MeetingStatus = MeetingStatus.CANCELLED;
             }
             else
             {
+                int countInvitees = 0;
                 proposal.MeetingStatus = MeetingStatus.CLOSED;
-
+                proposal.FinalRoom.RoomAvailability = Room.RoomStatus.BOOKED;
                 proposal.FinalDateLocation = finalDateLocation;
-                foreach (MeetingRecord record in proposal.Records)
+                foreach (KeyValuePair<string, MeetingRecord> record in proposal.Records)
                 {
-                    if (record.DateLocationSlots.Contains(finalDateLocation))
+
+                    if (record.Value.DateLocationSlots.Contains(finalDateLocation))
                     {
-                        proposal.Participants.Add(record.Name);
+                        countInvitees++;
+
+                        if (countInvitees > maxCapacity)
+                        {
+                            proposal.AddFullRecord(record.Value);
+                        }
+                        else
+                        {
+                            proposal.Participants.Add(record.Value.Name);
+                        }
                     }
                 }
             }
             Console.WriteLine(proposal.Coordinator + " closed meeting proposal " + proposal.Topic + ".");
+
+            BroadcastUpdateMeeting(proposal);
         }
 
         public void SendAllInvitations(MeetingProposal proposal)
@@ -293,58 +318,31 @@ namespace Server
             }
         }
 
-        public void BroadcastJoin(string topic, MeetingRecord record)
+        public void BroadcastUpdateMeeting(MeetingProposal proposal)
         {
             foreach (IServer server in _servers)
             {
-                //_broadcastJoinDelegate.BeginInvoke(server, topic, record, BroadcastJoinCallback, null);
-                _broadcastJoinDelegate.BeginInvoke(server, topic, record, null, null);
+                _broadcastUpdateMeetingDelegate.BeginInvoke(server, proposal, BroadcastUpdateMeetingCallback, null);
+                //_broadcastCloseDelegate.BeginInvoke(server, topic, record, null, null);
             }
         }
 
-        public void BroadcastJoinToServer(IServer server, string topic, MeetingRecord record)
+        public void BroadcastUpdateMeetingToServer(IServer server, MeetingProposal proposal)
         {
-            Console.WriteLine("going to send join {0}", topic);
-            server.ReceiveJoin(topic, record);
+            Console.WriteLine("going to send update {0}", proposal.Topic);
+            server.ReceiveUpdateMeeting(proposal);
         }
 
-        /*public void BroadcastJoinCallback(IAsyncResult res)
+        public void BroadcastUpdateMeetingCallback(IAsyncResult res)
         {
-            _broadcastJoinDelegate.EndInvoke(res);
-            Console.WriteLine("finished sending join");
-        }*/
-
-        public void ReceiveJoin(string topic, MeetingRecord record)
-        {
-            Console.WriteLine("received join {0}", topic);
-            _currentMeetingProposals[topic].AddMeetingRecord(record);
+            _broadcastUpdateMeetingDelegate.EndInvoke(res);
+            Console.WriteLine("finished sending update");
         }
 
-        public void BroadcastClose(string topic, MeetingRecord record)
+        public void ReceiveUpdateMeeting(MeetingProposal proposal)
         {
-            foreach (IServer server in _servers)
-            {
-                //_broadcastJoinDelegate.BeginInvoke(server, topic, record, BroadcastJoinCallback, null);
-                _broadcastCloseDelegate.BeginInvoke(server, topic, record, null, null);
-            }
-        }
-
-        public void BroadcastCloseToServer(IServer server, string topic, MeetingRecord record)
-        {
-            Console.WriteLine("going to send close {0}", topic);
-            server.ReceiveJoin(topic, record);
-        }
-
-        /*public void BroadcastCloseCallback(IAsyncResult res)
-        {
-            _broadcastJoinDelegate.EndInvoke(res);
-            Console.WriteLine("finished sending close");
-        }*/
-
-        public void ReceiveClose(string topic, MeetingRecord record)
-        {
-            Console.WriteLine("received close {0}", topic);
-            _currentMeetingProposals[topic].AddMeetingRecord(record);
+            Console.WriteLine("received update {0}", proposal.Topic);
+            _currentMeetingProposals[proposal.Topic] = proposal;
         }
 
         public void RegisterRooms(string fileName)
@@ -370,7 +368,7 @@ namespace Server
                     }
                 }
 
-                _locations[locationName].AddRoom(new Room(roomName, capacity, Room.RoomStatus.NonBooked));
+                _locations[locationName].AddRoom(new Room(roomName, capacity, Room.RoomStatus.NONBOOKED));
 
             }
         }

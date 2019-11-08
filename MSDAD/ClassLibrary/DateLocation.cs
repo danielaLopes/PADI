@@ -29,9 +29,9 @@ namespace ClassLibrary
             DateLocation dateLocation = (DateLocation)obj;
             return (dateLocation != null) && (this.LocationName.Equals(dateLocation.LocationName)) && (this.date.Equals(dateLocation.date));
         }
-
     }
 
+    [Serializable]
     public class Location
     {
         public string Name { get; set; }
@@ -59,12 +59,13 @@ namespace ClassLibrary
         }
     }
 
+    [Serializable]
     public class Room
     {
         public enum RoomStatus
         {
-            NonBooked,
-            Booked,
+            NONBOOKED,
+            BOOKED,
         }
 
         private string name;

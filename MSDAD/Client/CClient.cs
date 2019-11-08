@@ -86,7 +86,9 @@ namespace Client
                 MinAttendees = Int32.Parse(minAttendees),
                 DateLocationSlots = parsedSlots,
                 Invitees = parsedInvitees,
-                Records = new List<MeetingRecord>(),
+                Records = new SortedDictionary<string, MeetingRecord>(),
+                FailedRecords = new List<MeetingRecord>(),
+                FullRecords = new List<MeetingRecord>(),
                 Participants = new List<string>(),
                 MeetingStatus = MeetingStatus.OPEN
 

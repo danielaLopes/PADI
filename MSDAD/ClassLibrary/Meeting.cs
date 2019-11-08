@@ -20,7 +20,7 @@ namespace ClassLibrary
         public int MinAttendees { get; set; }
         public List<DateLocation> DateLocationSlots { get; set; }
         public List<string> Invitees { get; set; }
-        public List<MeetingRecord> Records { get; set; }
+        public SortedDictionary<string, MeetingRecord> Records { get; set; }
         // Maintains info on records that failed due to concurrent join and closes
         public List<MeetingRecord> FailedRecords { get; set; }
         // Maintains info on records that failed due to not enough participants' slots
@@ -28,10 +28,11 @@ namespace ClassLibrary
         public MeetingStatus MeetingStatus { get; set; }
         public List<string> Participants { get; set; }
         public DateLocation FinalDateLocation { get; set; }
+        public Room FinalRoom { get; set; }
 
         public void AddMeetingRecord(MeetingRecord record)
         {
-            Records.Add(record);
+            Records.Add(record.Name,record);
         }
 
         public void AddFailedRecord(MeetingRecord record)
@@ -55,7 +56,6 @@ namespace ClassLibrary
             return Topic.GetHashCode();
         }
 
-        // TODO : e preciiso imprimir mais coisas????
         public override string ToString()
         {
             if (MeetingStatus == MeetingStatus.CLOSED)
@@ -65,7 +65,19 @@ namespace ClassLibrary
                 {
                     participants += part.ToString() + " ";
                 }
-                return MeetingStatus + " " + Topic + " " + participants + " " + FinalDateLocation;
+                string failedParticipants = "";
+                foreach (MeetingRecord part in FailedRecords)
+                {
+                    failedParticipants += part.ToString() + " ";
+                }
+                string fullParticipants = "";
+                foreach (MeetingRecord part in FullRecords)
+                {
+                    fullParticipants += part.ToString() + " ";
+                }
+
+                return MeetingStatus + " " + Topic + " " + participants + " " + FinalDateLocation + " " + FinalRoom + "\n" +
+                        "Failed Records : " + failedParticipants + "\n" + "Not enough space Participants : " + fullParticipants;
             }
 
             string slots = "";
@@ -94,7 +106,12 @@ namespace ClassLibrary
 
         public override string ToString()
         {
-            return Name + " " + DateLocationSlots;
+            string slots = "";
+            foreach(DateLocation slot in DateLocationSlots)
+            {
+                slots += slot.ToString() + " ";
+            }
+            return Name + " " + slots;
         }
     }
 }
