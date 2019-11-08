@@ -52,11 +52,11 @@ namespace PuppetMaster
         private CrashDelegate _crashDelegate;
         private FreezeDelegate _freezeDelegate;
         private UnfreezeDelegate _unfreezeDelegate;
-        private WaitDelegate _waitDelegate;
         private ShutDownSystemDelegate _shutDownSystemDelegate;
 
         private CheckNodeStatus _checkNodeStatusDelegate;
-        private AsyncCallback _checkNodeCallbackDelegate;
+
+        private int _nodesCreated;
 
         public MasterAPI(string[] pcsUrls)
         {
@@ -80,20 +80,22 @@ namespace PuppetMaster
             _crashDelegate = new CrashDelegate(CrashSync);
             _freezeDelegate = new FreezeDelegate(FreezeSync);
             _unfreezeDelegate = new UnfreezeDelegate(UnfreezeSync);
-            _waitDelegate = new WaitDelegate(WaitSync);
             _shutDownSystemDelegate = new ShutDownSystemDelegate(ShutDownSystemSync);
 
             _checkNodeStatusDelegate = new CheckNodeStatus(CheckNode);
-            _checkNodeCallbackDelegate = new AsyncCallback(CheckNodeCallback);
+
+            _nodesCreated = 0;
         }
 
         public IAsyncResult Server(string fields, string serverId, string url)
         {
+            _nodesCreated++;
             return _serverDelegate.BeginInvoke(fields, serverId, url, null, null);
         }
 
         public IAsyncResult Client(string fields, string username, string url)
         {
+            _nodesCreated++;
             return _clientDelegate.BeginInvoke(fields, username, url, null, null);
         }
 
@@ -125,7 +127,10 @@ namespace PuppetMaster
         // Wait x mss
         public void Wait(string fields)
         {
-            _waitDelegate.BeginInvoke(fields, null, null);
+            // wait is the only task supposed to be executed synchronously
+            Console.WriteLine("Goingo to wait {0} miliseconds", fields);
+            Thread.Sleep(Int32.Parse(fields));
+            Console.WriteLine("finished waiting");
         }
 
         public void ShutDownSystem()
@@ -234,7 +239,13 @@ namespace PuppetMaster
             // Status
         public void StatusSync()
         {
-            WaitHandle[] handles = new WaitHandle[Servers.Count + Clients.Count];
+            // we only want to check nodes after they are created
+            while((Servers.Count + Clients.Count) < _nodesCreated)
+            {
+                Thread.Sleep(500);
+            }
+
+            WaitHandle[] handles = new WaitHandle[_nodesCreated];
 
             lock (Servers)
             {
@@ -292,11 +303,6 @@ namespace PuppetMaster
         public void UnfreezeSync(string fields)
         {
 
-        }
-
-        public void WaitSync(string fields)
-        {
-            Thread.Sleep(Int32.Parse(fields));
         }
 
         public void ShutDownSystemSync()

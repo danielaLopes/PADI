@@ -50,19 +50,19 @@ namespace PuppetMaster
                 {
                     Status();
                 }
-                else if (command.Equals("Crash"))
+                else if (fields[0].Equals("Crash"))
                 {
                     Crash(strFields);
                 }
-                else if (command.Equals("Freeze"))
+                else if (fields[0].Equals("Freeze"))
                 {
                     Freeze(strFields);
                 }
-                else if (command.Equals("Unfreeze"))
+                else if (fields[0].Equals("Unfreeze"))
                 {
                     Unfreeze(strFields);
                 }
-                else if (command.Equals("Wait"))
+                else if (fields[0].Equals("Wait"))
                 {
                     Wait(strFields);
                 }
