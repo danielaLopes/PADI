@@ -52,7 +52,6 @@ namespace PuppetMaster
         private CrashDelegate _crashDelegate;
         private FreezeDelegate _freezeDelegate;
         private UnfreezeDelegate _unfreezeDelegate;
-        private WaitDelegate _waitDelegate;
         private ShutDownSystemDelegate _shutDownSystemDelegate;
 
         private CheckNodeStatus _checkNodeStatusDelegate;
@@ -81,7 +80,6 @@ namespace PuppetMaster
             _crashDelegate = new CrashDelegate(CrashSync);
             _freezeDelegate = new FreezeDelegate(FreezeSync);
             _unfreezeDelegate = new UnfreezeDelegate(UnfreezeSync);
-            _waitDelegate = new WaitDelegate(WaitSync);
             _shutDownSystemDelegate = new ShutDownSystemDelegate(ShutDownSystemSync);
 
             _checkNodeStatusDelegate = new CheckNodeStatus(CheckNode);
@@ -129,7 +127,10 @@ namespace PuppetMaster
         // Wait x mss
         public void Wait(string fields)
         {
-            _waitDelegate.BeginInvoke(fields, null, null);
+            // wait is the only task supposed to be executed synchronously
+            Console.WriteLine("Goingo to wait {0} miliseconds", fields);
+            Thread.Sleep(Int32.Parse(fields));
+            Console.WriteLine("finished waiting");
         }
 
         public void ShutDownSystem()
@@ -302,11 +303,6 @@ namespace PuppetMaster
         public void UnfreezeSync(string fields)
         {
 
-        }
-
-        public void WaitSync(string fields)
-        {
-            Thread.Sleep(Int32.Parse(fields));
         }
 
         public void ShutDownSystemSync()

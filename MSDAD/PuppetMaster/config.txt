@@ -3,3 +3,4 @@ Server 123 tcp://localhost:9898/123 1 1 1
 Client joao tcp://localhost:9091/joao tcp://localhost:9898/123 C:../../../Client/clientCommandsJoao.txt
 Client maria tcp://localhost:9090/maria tcp://localhost:9898/123 C:../../../Client/clientCommandsMaria.txt
 Status
+Wait 4000
