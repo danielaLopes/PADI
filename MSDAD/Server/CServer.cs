@@ -122,7 +122,7 @@ namespace Server
             foreach (KeyValuePair<string, MeetingProposal> proposal in _currentMeetingProposals)
             {
                 
-                if (proposal.Value.Invitees.Contains(name) && knownProposals.ContainsKey(proposal.Value.Topic))
+                if (knownProposals.ContainsKey(proposal.Value.Topic))
                 {
                     proposals.Add(proposal.Value.Topic, proposal.Value);
                 }
@@ -183,6 +183,7 @@ namespace Server
                     finalDateLocation = dateLocation;
                 }
             }
+            Console.WriteLine(finalDateLocation.LocationName);
             Location location = _locations[finalDateLocation.LocationName];
             SortedDictionary<int, Room> possibleRooms = new SortedDictionary<int, Room>();
             int maxCapacity = 0;
@@ -232,6 +233,8 @@ namespace Server
                     if (record.Value.DateLocationSlots.Contains(finalDateLocation))
                     {
                         countInvitees++;
+
+                        Console.WriteLine("record " + record.Value);
 
                         if (countInvitees > maxCapacity)
                         {
