@@ -35,8 +35,10 @@ namespace Client
 
             int nInvitees = Int32.Parse(fields[4]);
             int lowerInviteesBound = upperSlotBound;
+            if (nInvitees != 0)
+                _client.Create(fields[1], fields[2], fields.GetRange(lowerSlotBound, nSlots), fields.GetRange(lowerInviteesBound, nInvitees));
 
-            _client.Create(fields[1], fields[2], fields.GetRange(lowerSlotBound, nSlots), fields.GetRange(lowerInviteesBound, nInvitees));
+            else _client.Create(fields[1], fields[2], fields.GetRange(lowerSlotBound, nSlots));
         }
 
         /// <summary>

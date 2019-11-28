@@ -340,14 +340,14 @@ namespace Server
         // TODO
         public void SendAllInvitationsCallback(IAsyncResult res)
         {
-            _sendAllInvitationsDelegate.EndInvoke(res);
+            // _sendAllInvitationsDelegate.EndInvoke(res);
             Console.WriteLine("finished sending all invitations");
         }
 
         // TODO
         public void SendInvitationCallback(IAsyncResult res)
         {
-            _sendInvitationsDelegate.EndInvoke(res);
+            //_sendInvitationsDelegate.EndInvoke(res);
             Console.WriteLine("finished sending invitation");
         }
 
