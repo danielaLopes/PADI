@@ -91,10 +91,10 @@ namespace PuppetMaster
             Console.WriteLine("");
             Console.WriteLine("        PUPPETMASTER commands:");
             Console.WriteLine("        Status");
-            Console.WriteLine("        Crash [server_id]");
-            Console.WriteLine("        Freeze [server_id]");
-            Console.WriteLine("        Unfreeze [server_id]");
-            Console.WriteLine("        Wait [x_ms]");
+            Console.WriteLine("        Crash <server_id>");
+            Console.WriteLine("        Freeze <server_id>");
+            Console.WriteLine("        Unfreeze <server_id>");
+            Console.WriteLine("        Wait <x_ms>");
             Console.WriteLine("        Shutdown");
         }
 
@@ -136,14 +136,13 @@ namespace PuppetMaster
                     Console.ReadLine(); 
                 }
             }
-
-            scriptMaster.PrintGUI();
+     
             // accepts command-line commands
             string command = "";
             while(true)
             {
+                scriptMaster.PrintGUI();
                 command = Console.ReadLine();
-                
                 scriptMaster.ReceiveCommand(command);
             }
         }

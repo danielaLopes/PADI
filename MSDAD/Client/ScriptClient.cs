@@ -37,6 +37,20 @@ namespace Client
             }
         }
 
+        public void PrintGUI()
+        {
+            Console.WriteLine("");
+            Console.WriteLine("        CLIENT commands:");
+            Console.WriteLine("        list");
+            Console.WriteLine("        create <meeting_topic> " +
+                "<min_attendees> <n_slots> <n_invitees> <slots[n_slots]>" +
+                " <invitees[n_invitees]>");
+            Console.WriteLine("        join <meeting_topic>");
+            Console.WriteLine("        close <meeting_topic>");
+            Console.WriteLine("        wait [x_ms]");
+            Console.WriteLine("        shutdown");
+        }
+
         /// <summary>
         /// 
         /// </summary>
@@ -73,20 +87,36 @@ namespace Client
 
             string[] lines = System.IO.File.ReadAllLines(@scriptPath);
 
-            foreach (string line in lines)
+            Console.WriteLine("Press s for executing commands sequentially and n for executing step by step");
+            string mode = Console.ReadLine();
+
+            // sequentially
+            if (mode.Equals("s"))
             {
-                Console.WriteLine(line);
-                scriptClient.ReceiveCommand(line);
+                foreach (string line in lines)
+                {
+                    Console.WriteLine(line);
+                    scriptClient.ReceiveCommand(line);
+                }
+            }
+            // step by step
+            else if (mode.Equals("n"))
+            {
+                foreach (string line in lines)
+                {
+                    scriptClient.ReceiveCommand(line);
+                    Console.WriteLine("Enter for next command");
+                    Console.ReadLine();
+                }
             }
 
-            System.Console.WriteLine("Enter client commands, enter shutdown to leave");
             // accepts command-line commands
-            string command = Console.ReadLine();
+            string command = "";
             while (!command.Equals("shutdown"))
             {
-                scriptClient.ReceiveCommand(command);
-
+                scriptClient.PrintGUI();
                 command = Console.ReadLine();
+                scriptClient.ReceiveCommand(command);
             }
         }
     }
