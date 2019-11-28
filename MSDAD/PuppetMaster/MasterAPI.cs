@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Net.Sockets;
 using System.Threading;
 using ClassLibrary;
 using PCS;
@@ -275,7 +276,15 @@ namespace PuppetMaster
 
         private void CheckNode(ISystemNode node)
         {
-            node.Status();
+            try {
+                node.Status();
+            }
+            catch(SocketException e)
+            {
+                Console.WriteLine("Some nodes are down");
+                Console.WriteLine(e.Message);
+            }
+            
         }
 
         private void CheckNodeCallback(IAsyncResult res)

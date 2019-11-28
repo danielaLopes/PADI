@@ -12,7 +12,7 @@ namespace PCS
     {
         private const int PCS_PORT = 10000;
         private const string PCS_NAME = "pcs";
-        private List<Process> _processes;
+        private List<String> _processes;
 
         public ProcessCreationService()
         {
@@ -21,20 +21,27 @@ namespace PCS
             ChannelServices.RegisterChannel(channel, false);
             // create the PCS's remote object
             RemotingServices.Marshal(this, PCS_NAME, typeof(ProcessCreationService));
-            _processes = new List<Process>();
+            _processes = new List<String>();
         }
 
         public void Start(string path, string fields)
         {
-            _processes.Add(Process.Start(@path, fields));
+            Process newProcess = Process.Start(@path, fields);
+            _processes.Add(newProcess.ProcessName);
         }
 
         public void ShutDownAll()
         {
-            foreach(Process process in _processes)
+            foreach(String process in _processes)
             {
-                process.CloseMainWindow();
-                process.Close();
+                Process[] p = Process.GetProcessesByName(process);
+                if(p.Length != 0)
+                    foreach(Process proc in p)
+                    {
+                        proc.CloseMainWindow();
+                        proc.Close();
+                    }
+                
             }
 
             Console.WriteLine("closed all processes");
