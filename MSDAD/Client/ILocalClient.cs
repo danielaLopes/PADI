@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Client
 {
 
-    public interface ILocalClient
+    interface ILocalClient
     {
         void List();
 

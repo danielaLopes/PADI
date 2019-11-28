@@ -1,2 +1,2 @@
-Porto 1 room2
-Lisboa 2 room1
+Lisboa 1 sala-tejo
+Porto 4 sala-douro

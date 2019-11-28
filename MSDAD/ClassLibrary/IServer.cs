@@ -16,6 +16,13 @@ namespace ClassLibrary
 
         void UpdateClient(string url);
 
+        // methods to be used by PuppetMaster to simulate faults and delays
+        void Crash();
+
+        void Freeze();
+
+        void Unfreeze();
+
         // methods to be used by Clients
         void RegisterUser(string username, string clientUrl);
 
@@ -27,8 +34,6 @@ namespace ClassLibrary
         
         void Close(string topic);
 
-        void AttributeNewServer(string username);
-
         // methods to be used by other servers
         void ReceiveNewMeeting(MeetingProposal meeting);
 
@@ -37,6 +42,5 @@ namespace ClassLibrary
         void ReceiveClose(MeetingProposal proposal);
 
         void ReceiveUpdateLocation(Location location);
-
     }
 }

@@ -44,6 +44,17 @@ namespace Server
         /// </summary>
         private ConcurrentDictionary<string, IClient> _clients = new ConcurrentDictionary<string, IClient>();
 
+        /// <summary>
+        /// Max number of faults tolerated by the system ?????
+        /// </summary>
+        private int _maxFaults;
+
+        /// <summary>
+        /// Interval to attribute a random delay to each incoming message in millisseconds
+        /// </summary>
+        private int _minDelay;
+        private int _maxDelay;
+
         // to send messages to clients asynchronously, otherwise the loop would deadlock
         private SendAllInvitationsDelegate _sendAllInvitationsDelegate;
         private InvitationDelegate _sendInvitationsDelegate;
@@ -52,6 +63,18 @@ namespace Server
         private BroadcastJoinDelegate _broadcastJoinDelegate;
         private BroadcastCloseDelegate _broadcastCloseDelegate;
         private BroadcastUpdateLocationDelegate _broadcastUpdateLocationDelegate;
+
+
+        /// <summary>
+        /// Decides a random number for the delay of an incoming message in millisseconds
+        /// according to the server's delay interval
+        /// </summary>
+        /// <returns> The delay in millisseconds </returns>
+        public int RandomIncomingMessageDelay()
+        {
+            Random random = new Random();
+            return random.Next(_minDelay, _maxDelay);
+        }
 
         public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay, string roomsFile, List<string> serverUrls = null, List<string> clientUrls = null)
         //public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay, List<string> locations = null, List<string> serverUrls = null, List<string> clientUrls = null)
@@ -79,6 +102,11 @@ namespace Server
                 UpdateClients(clientUrls);
             } //else : the puppet master invokes the correspondent update methods
 
+            _maxFaults = maxDelay;
+
+            _minDelay = minDelay;
+            _maxDelay = maxDelay;
+
             _sendAllInvitationsDelegate = new SendAllInvitationsDelegate(SendAllInvitations);
             _sendInvitationsDelegate = new InvitationDelegate(SendInvitationToClient);
 
@@ -88,8 +116,12 @@ namespace Server
             _broadcastUpdateLocationDelegate = new BroadcastUpdateLocationDelegate(BroadcastUpdateLocationToServer);
         }
 
+        // ------------------- COMMANDS SENT BY CLIENTS -------------------
+
         public void RegisterUser(string username, string clientUrl) 
         {
+            Thread.Sleep(RandomIncomingMessageDelay());
+
             // obtain client remote object
             if (_clients.TryAdd(username, (IClient)Activator.GetObject(typeof(IClient), clientUrl)))
             {
@@ -103,6 +135,8 @@ namespace Server
 
         public void Create(MeetingProposal proposal)
         {
+            Thread.Sleep(RandomIncomingMessageDelay());
+
             if (_currentMeetingProposals.TryAdd(proposal.Topic, proposal))
             {
                 Console.WriteLine("Created new meeting proposal for " + proposal.Topic + ".");
@@ -117,6 +151,8 @@ namespace Server
 
         public void List(string name, Dictionary<string,MeetingProposal> knownProposals)
         {
+            Thread.Sleep(RandomIncomingMessageDelay());
+
             Dictionary<string,MeetingProposal> proposals = new Dictionary<string, MeetingProposal>();
 
             foreach (KeyValuePair<string, MeetingProposal> proposal in _currentMeetingProposals)
@@ -132,6 +168,8 @@ namespace Server
 
         public void Join(string username, string topic, MeetingRecord record)
         {
+            Thread.Sleep(RandomIncomingMessageDelay());
+
             MeetingProposal proposal;
             if (!_currentMeetingProposals.TryGetValue(topic, out proposal))
             {
@@ -172,6 +210,8 @@ namespace Server
 
         public void Close(string topic)
         {
+            Thread.Sleep(RandomIncomingMessageDelay());
+
             MeetingProposal proposal = _currentMeetingProposals[topic];
 
             DateLocation finalDateLocation = new DateLocation();
@@ -252,6 +292,11 @@ namespace Server
             BroadcastClose(proposal);
         }
 
+
+        // ------------------- COMMUNICATION WITH OTHER SERVERS -------------------
+        // servers should send updates to other servers so that they maintain the state distributed
+
+        // TODO all invitations now should be sent by client
         public void SendAllInvitations(MeetingProposal proposal)
         {
 
@@ -285,18 +330,21 @@ namespace Server
             }
         }
 
+        // TODO invitations now must be sent by a client to other clients
         public void SendInvitationToClient(IClient user, MeetingProposal proposal, string username)
         {
             Console.WriteLine("going to send invitation to {0}", username);
             user.ReceiveInvitation(proposal);
         }
 
+        // TODO
         public void SendAllInvitationsCallback(IAsyncResult res)
         {
             _sendAllInvitationsDelegate.EndInvoke(res);
             Console.WriteLine("finished sending all invitations");
         }
 
+        // TODO
         public void SendInvitationCallback(IAsyncResult res)
         {
             _sendInvitationsDelegate.EndInvoke(res);
@@ -325,6 +373,7 @@ namespace Server
 
         public void ReceiveNewMeeting(MeetingProposal meeting)
         {
+            Thread.Sleep(RandomIncomingMessageDelay());
             if (_currentMeetingProposals.TryAdd(meeting.Topic, meeting))
             {
                 Console.WriteLine("received new meeting {0}", meeting.Topic);
@@ -357,6 +406,8 @@ namespace Server
 
         public void ReceiveJoin(string username, MeetingProposal proposal, MeetingRecord record)
         {
+            Thread.Sleep(RandomIncomingMessageDelay());
+
             Console.WriteLine("received join {0}", proposal.Topic);
 
             MeetingProposal previousProposal;
@@ -395,6 +446,8 @@ namespace Server
 
         public void ReceiveClose(MeetingProposal proposal)
         {
+            Thread.Sleep(RandomIncomingMessageDelay());
+
             Console.WriteLine("received close {0}", proposal.Topic);
             _currentMeetingProposals[proposal.Topic] = proposal;
         }
@@ -421,37 +474,14 @@ namespace Server
 
         public void ReceiveUpdateLocation(Location location)
         {
+            Thread.Sleep(RandomIncomingMessageDelay());
+
             Console.WriteLine("received updated location {0}", location.Name);
             _locations[location.Name] = location;
         }
 
-        public void RegisterRooms(string fileName)
-        {
-            string[] lines = System.IO.File.ReadAllLines(@fileName);
 
-            // each line has the location and room arguments: locationName roomName capacity
-            foreach (string line in lines)
-            {
-                List<string> args = line.Split().ToList();
-                string locationName = args[0];
-                int capacity = Int32.Parse(args[1]);
-                string roomName = args[2];               
-
-                if (!_locations.ContainsKey(locationName)) {
-                    if (_locations.TryAdd(locationName, new Location(locationName)))
-                    {
-                        Console.WriteLine("added new location {0}", locationName);
-                    }
-                    else
-                    {
-                        Console.WriteLine("Not possible to add location {0}", locationName);
-                    }
-                }
-
-                _locations[locationName].AddRoom(new Room(roomName, capacity, Room.RoomStatus.NONBOOKED));
-
-            }
-        }
+        // ------------------- PUPPET MASTER COMMANDS -------------------
 
         public void UpdateServers(List<string> serverUrls)
         {
@@ -500,16 +530,6 @@ namespace Server
             }
         }
 
-        public void AttributeNewServer(string username)
-        {
-            // TODO change method of server selection, for example server with least clients
-            Random randomizer = new Random();
-            int random = randomizer.Next(_servers.Count);
-
-            List<string> urls = _servers.Keys.ToList();
-            _clients[username].SwitchServer(urls[random]);
-        }
-
         public void Status()
         {
             Console.WriteLine("Server is active. URL: {0}", SERVER_URL);
@@ -518,6 +538,66 @@ namespace Server
         public void ShutDown()
         {
 
+        }
+
+        public void Crash()
+        {
+
+        }
+
+        public void Freeze()
+        {
+
+        }
+
+        public void Unfreeze()
+        {
+
+        }
+
+
+        // ------------------- METHODS FOR SERVER TO INITIATE CORRECTLY -------------------
+
+        public void RegisterRooms(string fileName)
+        {
+            string[] lines = System.IO.File.ReadAllLines(@fileName);
+
+            // each line has the location and room arguments: locationName roomName capacity
+            foreach (string line in lines)
+            {
+                List<string> args = line.Split().ToList();
+                string locationName = args[0];
+                int capacity = Int32.Parse(args[1]);
+                string roomName = args[2];
+
+                if (!_locations.ContainsKey(locationName))
+                {
+                    if (_locations.TryAdd(locationName, new Location(locationName)))
+                    {
+                        Console.WriteLine("added new location {0}", locationName);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Not possible to add location {0}", locationName);
+                    }
+                }
+
+                _locations[locationName].AddRoom(new Room(roomName, capacity, Room.RoomStatus.NONBOOKED));
+
+            }
+        }
+
+
+        // ------------------- METHODS TO SUPPORT SERVER FAILURES -------------------
+
+        public void AttributeNewServer(string username)
+        {
+            // TODO change method of server selection, for example server with least clients
+            Random randomizer = new Random();
+            int random = randomizer.Next(_servers.Count);
+
+            List<string> urls = _servers.Keys.ToList();
+            _clients[username].SwitchServer(urls[random]);
         }
 
         /// <summary>
