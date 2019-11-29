@@ -149,7 +149,7 @@ namespace PuppetMaster
 
             lock (ServerUrls)
             {
-                ServerUrls += url;
+                ServerUrls += " " + url;
             }
 
             result.AsyncWaitHandle.WaitOne();
@@ -174,7 +174,7 @@ namespace PuppetMaster
 
             lock (ClientUrls)
             {
-                ClientUrls += url;
+                ClientUrls += " " + url;
             }
 
             result.AsyncWaitHandle.WaitOne();
