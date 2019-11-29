@@ -535,23 +535,25 @@ namespace Server
 
         public void UpdateServers(List<string> serverUrls)
         {
-            foreach (KeyValuePair<string, IServer> server in _servers)
+            foreach (string url in serverUrls)
             {
-                RegisterServer(server.Key);
+                UpdateServer(url);
             }
         }
 
-        public void RegisterServer(string serverUrl)
+        public void UpdateServer(string serverUrl)
         {
             Console.WriteLine("Updating server {0}", serverUrl);
 
-            IServer server = UpdateServer(serverUrl);
+            IServer server = RegisterServer(serverUrl);
 
-            server.UpdateServer(SERVER_URL);
+            server.RegisterServer(SERVER_URL);
         }
 
-        public IServer UpdateServer(string serverUrl)
+        public IServer RegisterServer(string serverUrl)
         {
+            Console.WriteLine("Registering server {0}", serverUrl);
+
             IServer server = (IServer)Activator.GetObject(typeof(IServer), serverUrl);
             _servers.TryAdd(serverUrl, server);
 
@@ -583,21 +585,22 @@ namespace Server
         ///     args[5]->roomsFile
         ///     (optional)
         ///     args[6]->numServers
-        ///     args[8]->serversUrls
+        ///     args[7]->serversUrls
         /// </param>
         static void Main(string[] args) {
 
             CServer server;
 
-            // without PuppetMaster
             if (args.Length > 6)
             {
+                Console.WriteLine("nServers " + args[6]);
                 int nServers = Int32.Parse(args[6]);
 
                 List<string> serversUrl = new List<string>();
-                int i = 6;
-                for (; i < 6 + nServers; i++)
+                int i = 7;
+                for (; i < 7 + nServers; i++)
                 {
+                    Console.WriteLine("new server url added " + args[i]);
                     serversUrl.Add(args[i]);
                 }
                 server = new CServer(args[0], args[1], Int32.Parse(args[2]), Int32.Parse(args[3]), Int32.Parse(args[4]), args[5], serversUrl);    

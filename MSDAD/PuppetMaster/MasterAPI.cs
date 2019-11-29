@@ -144,13 +144,16 @@ namespace PuppetMaster
             fields += " " + LOCATIONS_PCS_PATH;
 
             // sends server pre-existing servers' urls as part of the arguments
-            IAsyncResult result = _startProcessDelegate.BeginInvoke(url, fields + ServerUrls, 
+            IAsyncResult result = _startProcessDelegate.BeginInvoke(url, 
+                    fields + " " + Servers.Count.ToString() + " " + ServerUrls, 
                     @"..\..\..\Server\bin\Debug\Server.exe", null, null);
 
             lock (ServerUrls)
             {
                 ServerUrls += " " + url;
             }
+
+            Console.WriteLine("servers: " + ServerUrls);
 
             result.AsyncWaitHandle.WaitOne();
 
@@ -169,8 +172,9 @@ namespace PuppetMaster
         public void ClientSync(string fields, string username, string url)
         {
             // TODO client still does not receive other clients
-            IAsyncResult result = _startProcessDelegate.BeginInvoke(url, fields, 
-                    @"..\..\..\Client\bin\Debug\Client.exe" + ClientUrls, null, null);
+            IAsyncResult result = _startProcessDelegate.BeginInvoke(url,
+                    fields + " " + Clients.Count.ToString() + " " + ClientUrls, 
+                    @"..\..\..\Client\bin\Debug\Client.exe", null, null);
 
             lock (ClientUrls)
             {

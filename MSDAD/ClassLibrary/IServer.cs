@@ -36,6 +36,6 @@ namespace ClassLibrary
 
         void ReceiveUpdateLocation(Location location);
 
-        IServer UpdateServer(string serverUrl);
+        IServer RegisterServer(string serverUrl);
     }
 }
