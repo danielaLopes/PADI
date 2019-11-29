@@ -79,6 +79,7 @@ namespace Client
         {
             List<DateLocation> parsedSlots = ParseSlots(slots);
             List<string> parsedInvitees = invitees;
+            
             MeetingProposal proposal = new MeetingProposal
             {
                 Coordinator = USERNAME,
@@ -104,6 +105,7 @@ namespace Client
             }
             else
             {
+                Console.WriteLine("invitees:" + invitees);
                 // send to every client
             }
 
