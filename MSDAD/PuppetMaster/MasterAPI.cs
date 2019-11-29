@@ -139,7 +139,7 @@ namespace PuppetMaster
             _shutDownSystemDelegate.BeginInvoke(null, null);
         }
 
-        // Server server id URL max faults min delay max delay
+        // Server server id URL max faults min delay max delay serverUrls clientUrls
         // serverId <=> location
         public void ServerSync(string fields, string serverId, string url)
         {
