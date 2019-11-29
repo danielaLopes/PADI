@@ -4,7 +4,6 @@ using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
 using System.Collections.Generic;
 using ClassLibrary;
-using System.Collections;
 using System.Threading;
 using System.Linq;
 using System.Collections.Concurrent;
@@ -76,7 +75,7 @@ namespace Server
             return random.Next(_minDelay, _maxDelay);
         }
 
-        public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay, string roomsFile, List<string> serverUrls = null, List<string> clientUrls = null)
+        public CServer(string serverId, string url, int maxFaults, int minDelay, int maxDelay, string roomsFile, List<string> serverUrls = null)
         {
             SERVER_ID = serverId;
             SERVER_URL = url;
@@ -94,12 +93,7 @@ namespace Server
             {
                 // gets other server's remote objects and saves them
                 UpdateServers(serverUrls);
-            } //else : the puppet master invokes the correspondent update methods
-            if (clientUrls != null)
-            {  
-                // gets clients's remote objects and saves them
-                UpdateClients(clientUrls);
-            } //else : the puppet master invokes the correspondent update methods
+            }
 
             _maxFaults = maxDelay;
 
@@ -482,53 +476,6 @@ namespace Server
 
         // ------------------- PUPPET MASTER COMMANDS -------------------
 
-        public void UpdateServers(List<string> serverUrls)
-        {
-            foreach (KeyValuePair<string, IServer> server in _servers)
-            {
-                UpdateServer(server.Key);
-            }
-        }
-
-        public void UpdateServerAndSpread(string serverUrl)
-        {
-            Console.WriteLine("Updating server and spread {0}", serverUrl);
-
-            IServer server = UpdateServer(serverUrl);
-            server.UpdateServer(SERVER_URL);
-        }
-
-        public IServer UpdateServer(string serverUrl)
-        {
-            Console.WriteLine("Updating server {0}", serverUrl);
-
-            IServer server = (IServer)Activator.GetObject(typeof(IServer), serverUrl);
-            _servers.TryAdd(serverUrl, server);
-
-            return server;
-        }
-
-        public void UpdateClients(List<string> clientUrls)
-        {
-            foreach (string url in clientUrls)
-            {
-                UpdateClient(url);
-            }
-        }
-
-        public void UpdateClient(string clientUrl)
-        {
-            string clientName = clientUrl.Split('/').ToList()[3];
-            if (_broadcastClients.TryAdd(clientName, (IClient)Activator.GetObject(typeof(IClient), clientUrl)))
-            {
-                Console.WriteLine("added client {0} to broadcastClients", clientName);
-            }
-            else
-            {
-                Console.WriteLine("Not possible to add client {0} to broadcasteClient", clientName);
-            }
-        }
-
         public void Status()
         {
             Console.WriteLine("Server is active. URL: {0}", SERVER_URL);
@@ -586,6 +533,31 @@ namespace Server
             }
         }
 
+        public void UpdateServers(List<string> serverUrls)
+        {
+            foreach (KeyValuePair<string, IServer> server in _servers)
+            {
+                RegisterServer(server.Key);
+            }
+        }
+
+        public void RegisterServer(string serverUrl)
+        {
+            Console.WriteLine("Updating server {0}", serverUrl);
+
+            IServer server = UpdateServer(serverUrl);
+
+            server.UpdateServer(SERVER_URL);
+        }
+
+        public IServer UpdateServer(string serverUrl)
+        {
+            IServer server = (IServer)Activator.GetObject(typeof(IServer), serverUrl);
+            _servers.TryAdd(serverUrl, server);
+
+            return server;
+        }
+
 
         // ------------------- METHODS TO SUPPORT SERVER FAILURES -------------------
 
@@ -611,9 +583,7 @@ namespace Server
         ///     args[5]->roomsFile
         ///     (optional)
         ///     args[6]->numServers
-        ///     args[7]->numClients
         ///     args[8]->serversUrls
-        ///     args[9]->clientUrls
         /// </param>
         static void Main(string[] args) {
 
@@ -623,7 +593,6 @@ namespace Server
             if (args.Length > 6)
             {
                 int nServers = Int32.Parse(args[6]);
-                int nClients = Int32.Parse(args[7]);
 
                 List<string> serversUrl = new List<string>();
                 int i = 6;
@@ -631,29 +600,13 @@ namespace Server
                 {
                     serversUrl.Add(args[i]);
                 }
-
-                if (nClients > 0)
-                {
-                    List<string> clientsUrl = new List<string>();
-                    for (; i < nClients; i++)
-                    {
-                        clientsUrl.Add(args[i]);
-                    }
-                    server = new CServer(args[0], args[1], Int32.Parse(args[2]), Int32.Parse(args[3]), Int32.Parse(args[4]), args[5], serversUrl, clientsUrl);
-                }
-                else
-                {
-                    server = new CServer(args[0], args[1], Int32.Parse(args[2]), Int32.Parse(args[3]), Int32.Parse(args[4]), args[5], serversUrl, null);
-                }
-                
+                server = new CServer(args[0], args[1], Int32.Parse(args[2]), Int32.Parse(args[3]), Int32.Parse(args[4]), args[5], serversUrl);    
             }
             // with PuppetMaster
             else
             {
                 server = new CServer(args[0], args[1], Int32.Parse(args[2]), Int32.Parse(args[3]), Int32.Parse(args[4]), args[5]);
             }
-
-            //Thread.Sleep(1000);
             
             System.Console.WriteLine("<enter> para sair...");
 			System.Console.ReadLine();
