@@ -44,6 +44,13 @@ namespace Server
         private ConcurrentDictionary<string, IClient> _clients = new ConcurrentDictionary<string, IClient>();
 
         /// <summary>
+        /// Simulates a collection of vector clocks
+        /// key: String corresponding to meeting topic
+        /// Value: Vector clock
+        /// </summary>
+        private ConcurrentDictionary<String, VectorClock> _meetingsClocks = new ConcurrentDictionary<String, VectorClock>();
+
+        /// <summary>
         /// Max number of faults tolerated by the system ?????
         /// </summary>
         private int _maxFaults;
@@ -132,8 +139,12 @@ namespace Server
 
             if (_currentMeetingProposals.TryAdd(proposal.Topic, proposal))
             {
+                // we create a new vector clock for the new meeting
+                _meetingsClocks[proposal.Topic] = new VectorClock(SERVER_URL, _servers.Keys);
+                _meetingsClocks[proposal.Topic].printVectorClock(proposal.Topic);
+
                 Console.WriteLine("Created new meeting proposal for " + proposal.Topic + ".");
-                _sendAllInvitationsDelegate.BeginInvoke(proposal, SendAllInvitationsCallback, null);
+                // _sendAllInvitationsDelegate.BeginInvoke(proposal, SendAllInvitationsCallback, null);
                 BroadcastNewMeeting(proposal);
             }
             else
@@ -162,7 +173,6 @@ namespace Server
         public void Join(string username, string topic, MeetingRecord record)
         {
             Thread.Sleep(RandomIncomingMessageDelay());
-
             MeetingProposal proposal;
             if (!_currentMeetingProposals.TryGetValue(topic, out proposal))
             {
@@ -197,6 +207,10 @@ namespace Server
                     proposal.AddMeetingRecord(record);
                     BroadcastJoin(username, proposal);
                 }
+
+                // we update the respective vector clock
+                updateVectorClock(topic);
+
                 Console.WriteLine(record.Name + " joined meeting proposal " + proposal.Topic + ".");
             }
         }
@@ -282,6 +296,8 @@ namespace Server
             }
             Console.WriteLine(proposal.Coordinator + " closed meeting proposal " + proposal.Topic + ".");
 
+            // we update the respective vector clock
+            updateVectorClock(topic);
             BroadcastClose(proposal);
         }
 
@@ -313,7 +329,7 @@ namespace Server
                         }
 
                         IClient invitee = _broadcastClients[username];
-                        _sendInvitationsDelegate.BeginInvoke(invitee, proposal, username, SendInvitationCallback, null);
+                        // _sendInvitationsDelegate.BeginInvoke(invitee, proposal, username, SendInvitationCallback, null);
 
                         Console.WriteLine("Sent invitation to user {0}", username);
                         // CHECK IF BROADCAST CLIENTS CONTAIS ALL INVITEES
@@ -471,6 +487,13 @@ namespace Server
 
             Console.WriteLine("received updated location {0}", location.Name);
             _locations[location.Name] = location;
+        }
+
+        public void updateVectorClock(String meeting)
+        {
+
+            _meetingsClocks[meeting].updateVectorClock(SERVER_URL);
+            _meetingsClocks[meeting].printVectorClock(meeting);
         }
 
 
