@@ -13,7 +13,7 @@ namespace PuppetMaster
     delegate void StartProcessDelegate(string pcsBaseUrl, string fields, string exePath);
 
     delegate void ServerDelegate(string fields, string serverId, string url);
-    delegate void ClientDelegate(string fields, string username, string url);
+    delegate void ClientDelegate(string fields, string username, string url, string serverUrl);
     delegate void AddRoomDelegate(List<string> fields);
     delegate void StatusDelegate();
     delegate void CrashDelegate(string fields);
@@ -94,10 +94,10 @@ namespace PuppetMaster
             return _serverDelegate.BeginInvoke(fields, serverId, url, null, null);
         }
 
-        public IAsyncResult Client(string fields, string username, string url)
+        public IAsyncResult Client(string fields, string username, string url, string serverUrl)
         {
             _nodesCreated++;
-            return _clientDelegate.BeginInvoke(fields, username, url, null, null);
+            return _clientDelegate.BeginInvoke(fields, username, url, serverUrl,null, null);
         }
 
         public IAsyncResult AddRoom(List<string> fields)
@@ -144,49 +144,73 @@ namespace PuppetMaster
             fields += " " + LOCATIONS_PCS_PATH;
 
             // sends server pre-existing servers' urls as part of the arguments
-            IAsyncResult result = _startProcessDelegate.BeginInvoke(url, 
-                    fields + " " + Servers.Count.ToString() + " " + ServerUrls, 
-                    @"..\..\..\Server\bin\Debug\Server.exe", null, null);
+            IAsyncResult result;
 
             lock (ServerUrls)
             {
+                // sends server pre-existing servers' urls as part of the arguments
+                result = _startProcessDelegate.BeginInvoke(url,
+                        fields + " " + Servers.Count.ToString() + " " + ServerUrls,
+                        @"..\..\..\Server\bin\Debug\Server.exe", null, null);
+
+                if (Servers.TryAdd(serverId, (IServer)Activator.GetObject(typeof(IServer), url)))
+                {
+                    Console.WriteLine("Successfully added Server {0}", url);
+                }
+                else
+                {
+                    Console.WriteLine("Could not add Server {0}", url);
+                }
+
                 ServerUrls += " " + url;
             }
 
             Console.WriteLine("servers: " + ServerUrls);
 
             result.AsyncWaitHandle.WaitOne();
-
-            if (Servers.TryAdd(serverId, (IServer)Activator.GetObject(typeof(IServer), url)))
-            {
-                Console.WriteLine("Successfully added Server {0}", url);
-            }
-            else
-            {
-                Console.WriteLine("Could not add Server {0}", url);
-            }
+ 
             Console.WriteLine("Server {0} created!", serverId);
         }
 
         // Client username client URL server URL script file
-        public void ClientSync(string fields, string username, string url)
+        public void ClientSync(string fields, string username, string url, string serverUrl)
         {
-            // TODO client still does not receive other clients
-            IAsyncResult result = _startProcessDelegate.BeginInvoke(url,
-                    fields + " " + Clients.Count.ToString() + " " + ClientUrls, 
-                    @"..\..\..\Client\bin\Debug\Client.exe", null, null);
+            Console.WriteLine("client fields: {0}", fields); 
+
+            IAsyncResult result;
 
             lock (ClientUrls)
             {
+                Console.WriteLine("existem {0} clientes urls: {1}", Clients.Count.ToString(), ClientUrls);
+                result = _startProcessDelegate.BeginInvoke(url,
+                        fields + " " + ChooseBackupServer(serverUrl) + " " + 
+                        Clients.Count.ToString() + " " + ClientUrls, 
+                        @"..\..\..\Client\bin\Debug\Client.exe", null, null);
+                // TODO SEE IF TRYADD IS PROBLEMATIC
+                Clients.TryAdd(username, (IClient)Activator.GetObject(typeof(IClient), url));
+
                 ClientUrls += " " + url;
             }
 
             result.AsyncWaitHandle.WaitOne();
 
-            // TODO SEE IF TRYADD IS PROBLEMATIC
-            Clients.TryAdd(username, (IClient)Activator.GetObject(typeof(IClient), url));
-
             Console.WriteLine("Client {0} created!", username);
+        }
+
+        public string ChooseBackupServer(string urlMainServer)
+        {
+            List<string> serverKeys = new List<string>(Servers.Keys);
+            for (int i = 0; i< serverKeys.Count; i++)
+            {
+                if (serverKeys[i].Equals(urlMainServer) && i != serverKeys.Count-1)
+                {
+                    return serverKeys[i + 1];
+                }
+                else if(serverKeys[i].Equals(urlMainServer)) {
+                    return serverKeys[0];
+                }
+            }
+            return urlMainServer;
         }
 
         public void StartProcess(string url, string fields, string exePath)

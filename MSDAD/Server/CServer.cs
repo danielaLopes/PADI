@@ -555,7 +555,7 @@ namespace Server
             Console.WriteLine("Registering server {0}", serverUrl);
 
             IServer server = (IServer)Activator.GetObject(typeof(IServer), serverUrl);
-            _servers.TryAdd(serverUrl, server);
+            if(!_servers.ContainsKey(serverUrl)) _servers.TryAdd(serverUrl, server);
 
             return server;
         }

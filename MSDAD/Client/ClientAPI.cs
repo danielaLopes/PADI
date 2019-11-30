@@ -47,7 +47,7 @@ namespace Client
         /// <param name="fields"></param>
         public void Join(List<string> fields)
         {
-            _client.Join(fields[1], fields.GetRange(2, fields.Count - 2));
+            _client.Join(fields[1], fields.GetRange(3, 3 + Int32.Parse(fields[2])));
         }
 
         /// <summary>

@@ -44,7 +44,7 @@ namespace PuppetMaster
                         WaitHandle.WaitAll(WaitServerHandles.ToArray());
                         WaitServersCreation = false;
                     }
-                    Client(strFields, fields[1], fields[2]);
+                    Client(strFields, fields[1], fields[2], fields[3]);
                 }
                 else if (command.Equals("Status"))
                 {
