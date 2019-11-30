@@ -15,14 +15,15 @@ namespace Client
         private readonly string USERNAME;
         private readonly string CLIENT_URL;
 
-        // TODO save how many clients? for now we only need to have a list with clients
-        private List<IClient> _clients;
+        private Dictionary<string, IClient> _clients;
         
         // saves the meeting proposal the client knows about (created or received invitation)
         public Dictionary<string, MeetingProposal> _knownMeetingProposals;
 
         // obtain server remote object
         private IServer _remoteServer;
+
+        private string _backupServerUrl;
 
         /// <summary>
         /// Creates TCP channel, saves relevant information for remoting, registers itself as
@@ -31,7 +32,7 @@ namespace Client
         /// <param name="username"></param>
         /// <param name="clientUrl"></param>
         /// <param name="serverUrl"></param>
-        public CClient(string username, string clientUrl, string serverUrl, List<string> clientsUrls = null)
+        public CClient(string username, string clientUrl, string serverUrl, string backupServer, List<string> clientsUrls = null)
         {
             USERNAME = username;
             CLIENT_URL = clientUrl;
@@ -44,8 +45,9 @@ namespace Client
             Console.WriteLine("Client registered with username {0} with url {0}.", username, clientUrl);
 
             RegisterNewServer(serverUrl);
+            _backupServerUrl = backupServer;
 
-            _clients = new List<IClient>();
+            _clients = new Dictionary<string, IClient>();
 
             _knownMeetingProposals = new Dictionary<string, MeetingProposal>();
 
@@ -151,8 +153,29 @@ namespace Client
         {
             foreach (string url in clientsUrls)
             {
-                _clients.Add(((IClient)Activator.GetObject(typeof(IClient), url)));
+                string name = url.Split('/')[3];
+                Console.WriteLine("client name: {0}", name);
+                UpdateClient(name, url);
             }
+        }
+
+        public void UpdateClient(string name, string clientUrl)
+        {
+            Console.WriteLine("Updating client {0}", clientUrl);
+
+            IClient client = RegisterClient(name, clientUrl);
+
+            client.RegisterClient(USERNAME, CLIENT_URL);
+        }
+
+        public IClient RegisterClient(string name, string clientUrl)
+        {
+            Console.WriteLine("Registering client {0}", clientUrl);
+
+            IClient client = (IClient)Activator.GetObject(typeof(IServer), clientUrl);
+            if (!_clients.ContainsKey(name)) _clients.Add(name, client);
+
+            return client;
         }
 
         public void Status()

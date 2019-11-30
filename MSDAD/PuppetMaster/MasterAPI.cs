@@ -13,7 +13,7 @@ namespace PuppetMaster
     delegate void StartProcessDelegate(string pcsBaseUrl, string fields, string exePath);
 
     delegate void ServerDelegate(string fields, string serverId, string url);
-    delegate void ClientDelegate(string fields, string username, string url);
+    delegate void ClientDelegate(string fields, string username, string url, string serverUrl);
     delegate void AddRoomDelegate(List<string> fields);
     delegate void StatusDelegate();
     delegate void CrashDelegate(string fields);
@@ -30,10 +30,10 @@ namespace PuppetMaster
         private const string PCS_NAME = "pcs";
 
         public ConcurrentDictionary<string, IServer> Servers { get; set; }
-        public ConcurrentBag<string> ServerUrls { get; set; }
+        public string ServerUrls { get; set; }
 
         public ConcurrentDictionary<string, IClient> Clients { get; set; }
-        public ConcurrentBag<string> ClientUrls { get; set; }
+        public string ClientUrls { get; set; }
 
         /// <summary>
         /// string->base url of pcs to match with server/client's urls
@@ -62,10 +62,10 @@ namespace PuppetMaster
         public MasterAPI(string[] pcsUrls)
         {
             Servers = new ConcurrentDictionary<string, IServer>();
-            ServerUrls = new ConcurrentBag<string>();
+            ServerUrls = "";
 
             Clients = new ConcurrentDictionary<string, IClient>();
-            ClientUrls = new ConcurrentBag<string>();
+            ClientUrls = "";
 
             PCSs = new ConcurrentDictionary<string, ProcessCreationService>();
             foreach (string url in pcsUrls) {
@@ -94,10 +94,10 @@ namespace PuppetMaster
             return _serverDelegate.BeginInvoke(fields, serverId, url, null, null);
         }
 
-        public IAsyncResult Client(string fields, string username, string url)
+        public IAsyncResult Client(string fields, string username, string url, string serverUrl)
         {
             _nodesCreated++;
-            return _clientDelegate.BeginInvoke(fields, username, url, null, null);
+            return _clientDelegate.BeginInvoke(fields, username, url, serverUrl,null, null);
         }
 
         public IAsyncResult AddRoom(List<string> fields)
@@ -139,56 +139,78 @@ namespace PuppetMaster
             _shutDownSystemDelegate.BeginInvoke(null, null);
         }
 
-        // Server server id URL max faults min delay max delay
-        // serverId <=> location
         public void ServerSync(string fields, string serverId, string url)
         {
             fields += " " + LOCATIONS_PCS_PATH;
+
             // sends server pre-existing servers' urls as part of the arguments
-            /*if (ServerUrls.Count > 0)
+            IAsyncResult result;
+
+            lock (ServerUrls)
             {
-                fields += " " + ServerUrls.Count.ToString();
-                foreach (string serverUrl in ServerUrls)
+                // sends server pre-existing servers' urls as part of the arguments
+                result = _startProcessDelegate.BeginInvoke(url,
+                        fields + " " + Servers.Count.ToString() + " " + ServerUrls,
+                        @"..\..\..\Server\bin\Debug\Server.exe", null, null);
+
+                if (Servers.TryAdd(serverId, (IServer)Activator.GetObject(typeof(IServer), url)))
                 {
-                    fields += " " + serverUrl;
+                    Console.WriteLine("Successfully added Server {0}", url);
                 }
+                else
+                {
+                    Console.WriteLine("Could not add Server {0}", url);
+                }
+
+                ServerUrls += " " + url;
             }
 
-            Console.WriteLine("Server args {0}", fields);*/
+            Console.WriteLine("servers: " + ServerUrls);
 
-            IAsyncResult result = _startProcessDelegate.BeginInvoke(url, fields, @"..\..\..\Server\bin\Debug\Server.exe", null, null);
             result.AsyncWaitHandle.WaitOne();
-
-            UpdateServerInfo(url);
-
-            // TODO SEE IF TRYADD IS PROBLEMATIC
-            if (Servers.TryAdd(serverId, (IServer)Activator.GetObject(typeof(IServer), url)))
-            {
-                Console.WriteLine("Successfully added Server {0}", url);
-            }
-            else
-            {
-                Console.WriteLine("Could not add Server {0}", url);
-            }
-            ServerUrls.Add(url); 
-
+ 
             Console.WriteLine("Server {0} created!", serverId);
         }
 
         // Client username client URL server URL script file
-        public void ClientSync(string fields, string username, string url)
+        public void ClientSync(string fields, string username, string url, string serverUrl)
         {
-            // TODO client still does not receive other clients
-            IAsyncResult result = _startProcessDelegate.BeginInvoke(url, fields, @"..\..\..\Client\bin\Debug\Client.exe", null, null);
+            Console.WriteLine("client fields: {0}", fields); 
+
+            IAsyncResult result;
+
+            lock (ClientUrls)
+            {
+                Console.WriteLine("existem {0} clientes urls: {1}", Clients.Count.ToString(), ClientUrls);
+                result = _startProcessDelegate.BeginInvoke(url,
+                        fields + " " + ChooseBackupServer(serverUrl) + " " + 
+                        Clients.Count.ToString() + " " + ClientUrls, 
+                        @"..\..\..\Client\bin\Debug\Client.exe", null, null);
+                // TODO SEE IF TRYADD IS PROBLEMATIC
+                Clients.TryAdd(username, (IClient)Activator.GetObject(typeof(IClient), url));
+
+                ClientUrls += " " + url;
+            }
+
             result.AsyncWaitHandle.WaitOne();
 
-            UpdateClientInfo(url);
-
-            // TODO SEE IF TRYADD IS PROBLEMATIC
-            Clients.TryAdd(username, (IClient)Activator.GetObject(typeof(IClient), url));
-            ClientUrls.Add(url);
-
             Console.WriteLine("Client {0} created!", username);
+        }
+
+        public string ChooseBackupServer(string urlMainServer)
+        {
+            List<string> serverKeys = new List<string>(Servers.Keys);
+            for (int i = 0; i< serverKeys.Count; i++)
+            {
+                if (serverKeys[i].Equals(urlMainServer) && i != serverKeys.Count-1)
+                {
+                    return serverKeys[i + 1];
+                }
+                else if(serverKeys[i].Equals(urlMainServer)) {
+                    return serverKeys[0];
+                }
+            }
+            return urlMainServer;
         }
 
         public void StartProcess(string url, string fields, string exePath)
@@ -197,22 +219,6 @@ namespace PuppetMaster
             string basePcsUrl = BaseUrlExtractor.Extract(url);
             ProcessCreationService pcs = PCSs[basePcsUrl];
             pcs.Start(@exePath, fields);
-        }
-
-        public void UpdateServerInfo(string newServerUrl)
-        {
-            foreach (KeyValuePair<string, IServer> server in Servers)
-            {
-                server.Value.UpdateServerAndSpread(newServerUrl);
-            }
-        }
-
-        public void UpdateClientInfo(string newClientUrl)
-        {
-            foreach (KeyValuePair<string, IServer> server in Servers)
-            {
-                server.Value.UpdateClient(newClientUrl);
-            }
         }
 
         public void SpreadLocationsFile()
@@ -248,27 +254,19 @@ namespace PuppetMaster
 
             WaitHandle[] handles = new WaitHandle[_nodesCreated];
 
-            lock (Servers)
+            int i = 0;
+            foreach (KeyValuePair<string, IServer> server in Servers)
             {
-                lock (Clients)
-                {
-                 
-                    int i = 0;
-                    foreach (KeyValuePair<string, IServer> server in Servers)
-                    {
-                        Console.WriteLine("check status of: {0}", server.Key);
-                        handles[i] = _checkNodeStatusDelegate.BeginInvoke(server.Value, CheckNodeCallback, null).AsyncWaitHandle;
-                        i++;
-                    }
+                Console.WriteLine("check status of: {0}", server.Key);
+                handles[i] = _checkNodeStatusDelegate.BeginInvoke(server.Value, CheckNodeCallback, null).AsyncWaitHandle;
+                i++;
+            }
 
-                    foreach (KeyValuePair<string, IClient> client in Clients)
-                    {
-                        Console.WriteLine("check status of: {0}", client.Key);
-                        handles[i] = _checkNodeStatusDelegate.BeginInvoke(client.Value, CheckNodeCallback, null).AsyncWaitHandle;
-                        i++;
-                    }
-                }
-
+            foreach (KeyValuePair<string, IClient> client in Clients)
+            {
+                Console.WriteLine("check status of: {0}", client.Key);
+                handles[i] = _checkNodeStatusDelegate.BeginInvoke(client.Value, CheckNodeCallback, null).AsyncWaitHandle;
+                i++;
             }
 
             WaitHandle.WaitAll(handles, 10000);

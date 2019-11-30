@@ -9,13 +9,6 @@ namespace ClassLibrary
     /// </summary>
     public interface IServer : ISystemNode
     {
-        // methods to be used by PuppetMaster
-        void UpdateServerAndSpread(string url);
-
-        IServer UpdateServer(string url);
-
-        void UpdateClient(string url);
-
         // methods to be used by PuppetMaster to simulate faults and delays
         void Crash();
 
@@ -42,5 +35,7 @@ namespace ClassLibrary
         void ReceiveClose(MeetingProposal proposal);
 
         void ReceiveUpdateLocation(Location location);
+
+        IServer RegisterServer(string serverUrl);
     }
 }
