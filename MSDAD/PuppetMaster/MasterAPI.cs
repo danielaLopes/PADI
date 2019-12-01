@@ -34,7 +34,6 @@ namespace PuppetMaster
         public List<string> ServerUrlList { get; set; }
 
         public ConcurrentDictionary<string, IClient> Clients { get; set; }
-        public string ClientUrls { get; set; }
 
         /// <summary>
         /// string->base url of pcs to match with server/client's urls
@@ -67,7 +66,6 @@ namespace PuppetMaster
             ServerUrlList = new List<string>();
 
             Clients = new ConcurrentDictionary<string, IClient>();
-            ClientUrls = "";
 
             PCSs = new ConcurrentDictionary<string, ProcessCreationService>();
             foreach (string url in pcsUrls) {
@@ -169,18 +167,12 @@ namespace PuppetMaster
         // Client username client URL server URL script file
         public void ClientSync(string fields, string username, string url, string serverUrl)
         {
-            IAsyncResult result;
-            lock (ClientUrls)
-            {
-                result = _startProcessDelegate.BeginInvoke(url,
-                        fields + " " + ChooseBackupServer(serverUrl) + " " + 
-                        Clients.Count.ToString() + " " + ClientUrls, 
-                        @"..\..\..\Client\bin\Debug\Client.exe", null, null);
+            IAsyncResult result = _startProcessDelegate.BeginInvoke(url,
+                    fields + " " + ChooseBackupServer(serverUrl), 
+                    @"..\..\..\Client\bin\Debug\Client.exe", null, null);
                
-                Clients.TryAdd(username, (IClient)Activator.GetObject(typeof(IClient), url));
+            Clients.TryAdd(username, (IClient)Activator.GetObject(typeof(IClient), url));
 
-                ClientUrls += " " + url;
-            }
             result.AsyncWaitHandle.WaitOne();
 
             Console.WriteLine("Client {0} created!", username);

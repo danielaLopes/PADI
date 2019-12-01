@@ -83,6 +83,12 @@ namespace Client
 
         public void Create(string meetingTopic, string minAttendees, List<string> slots, List<string> invitees = null)
         {
+            if (_knownClientUrls.Count == 0)
+            {
+                _knownClientUrls = _remoteServer.AskForUpdateClients();
+                UpdateClients(_knownClientUrls);
+            } 
+
             List<DateLocation> parsedSlots = ParseSlots(slots);
             List<string> parsedInvitees = invitees;
             
@@ -104,15 +110,13 @@ namespace Client
 
             _knownMeetingProposals.Add(proposal.Topic, proposal);
 
-            // TODO
-            if (invitees != null)
+            if (invitees == null)
             {
-                // send to all invitees
+                SendInvitations(new List<string>(_clients.Keys), proposal);
             }
             else
             {
-                Console.WriteLine("invitees:" + invitees);
-                // send to every client
+                SendInvitations(invitees, proposal);
             }
 
         }
@@ -153,9 +157,8 @@ namespace Client
         }
 
         /// <summary>
-        /// When client is initilized, he receives a list with
-        /// other clients' urls and then gets the respective
-        /// remote objects
+        /// When client receives a list with other clients' urls 
+        /// he gets the respective remote objects
         /// </summary>
         /// <param name="clientsUrls"></param>
         public void UpdateClients(List<string> clientsUrls)
@@ -164,37 +167,6 @@ namespace Client
             {
                 string name = url.Split('/')[3];
                 IClient client = RegisterClient(name, url);
-                if (client != null) client.RegisterClient(USERNAME, CLIENT_URL);
-            }
-        }
-
-        /// <summary>
-        /// Remote method in which a client registers another client and sends 
-        /// that client itself and the clients he knows to be registered
-        /// </summary>
-        /// <param name="name"></param>
-        /// <param name="clientUrl"></param>
-        /// <param name="otherClientUrls"></param>
-        public void BroadcastNewClient(string name, string url)
-        {
-            List<KeyValuePair<string, IClient>> knownClients = new List<KeyValuePair<string, IClient>>(_clients);
-            foreach (KeyValuePair<string, IClient> knownClient in knownClients)
-            {   
-                if (!knownClient.Key.Equals(name))
-                {
-                    knownClient.Value.RegisterClient(name, url);
-                }
-            }
-        }
-
-        public void ReceiveClientsList(List<string> urls)
-        {
-            foreach(string url in urls)
-            {   if (!url.Equals(CLIENT_URL))
-                {
-                    string name = url.Split('/')[3];
-                    RegisterClient(name, url);
-                }            
             }
         }
 
@@ -207,20 +179,17 @@ namespace Client
         /// <returns></returns>
         public IClient RegisterClient(string name, string clientUrl)
         {
-            IClient client = null;
-            
-            if (!_clients.ContainsKey(name) && !name.Equals(USERNAME))
+            Console.WriteLine("new client {0}", name);
+            IClient client = (IClient)Activator.GetObject(typeof(IClient), clientUrl);
+            _clients.TryAdd(name, client);
+            if (_clients[name] != null)
             {
-                Console.WriteLine("new client {0}", name);
-                client = (IClient)Activator.GetObject(typeof(IClient), clientUrl);
-                lock(_knownClientUrls)
-                {
-                    client.ReceiveClientsList(_knownClientUrls);
-                    _clients.TryAdd(name, client);
-                    _knownClientUrls.Add(clientUrl);
-                }
-
-                BroadcastNewClient(name, clientUrl);
+                Console.WriteLine("client {0} correctly added", name);
+            }
+            else
+            {
+                Console.WriteLine("client {0} incorrectly added", name);
+                Thread.Sleep(2000);
             }
             return client;
         }
@@ -237,37 +206,68 @@ namespace Client
 
         public void SendInvitations(List<string> invitees, MeetingProposal proposal)
         {
-            int minSpreaders = 1;
-            int threshold = 10;
+            // assumes every client knows every other client
 
-            List<IClient> directMessages = new List<IClient>();
-            foreach (string invitee in invitees)
+            //int minSpreaders = 1;
+            int threshold = 2;
+
+            // easy case: there are few invitees so we can 
+            // send the invitations directly
+            if (invitees.Count < threshold)
             {
-                if (_clients.ContainsKey(invitee))
-                {
-                    directMessages.Add(_clients[invitee]);
+                foreach (string invitee in invitees)
+                {   
+                    if (!invitee.Equals(USERNAME))
+                        // no need to send inviteesLeft because the invitation
+                        // is not going to need to be propapagated anymore
+                        _clients[invitee].ReceiveInvitation(proposal);
                 }
             }
-            if (directMessages.Count >= minSpreaders)
+            // case with lots of invitees: send first directly and then
+            // those to deliver the rest of the messages
+            else
             {
-                foreach (IClient client in directMessages)
+                List<string> inviteesLeft = new List<string>();
+                foreach (string invitee in invitees.GetRange(threshold, invitees.Count-threshold))
                 {
-                    client.ReceiveInvitation(proposal);
+                    if (!invitee.Equals(USERNAME))
+                    {
+                        Console.WriteLine("{0} added to inviteesLeft", invitee);
+                        inviteesLeft.Add(invitee);
+                    }
                 }
-                return;
-            }
+                foreach (string invitee in invitees.GetRange(0, threshold))
+                {
+                    Console.WriteLine("invitee {0},", invitee);
 
-            int nSends = 0;
-            foreach (KeyValuePair<string, IClient> client in _clients)
-            {
-                if (nSends >= threshold) return;
-                client.Value.ReceiveInvitation(proposal);
-                nSends++;
+                    if (!invitee.Equals(USERNAME))
+                    {
+                        _clients[invitee].ReceiveInvitation(proposal, inviteesLeft);
+                    }       
+                }
             }
         }
 
-        public void ReceiveInvitation(MeetingProposal proposal)
-        {    
+        public void ReceiveInvitation(MeetingProposal proposal, List<string> inviteesLeft = null)
+        {
+            if (_knownClientUrls.Count == 0)
+            {
+                _knownClientUrls = _remoteServer.AskForUpdateClients();
+                UpdateClients(_knownClientUrls);
+            } 
+
+            if (inviteesLeft != null)
+            {
+                foreach (string invitee in inviteesLeft)
+                {
+                    Console.WriteLine("invitee in inviteesLeft {0}", invitee);
+                }
+                SendInvitations(inviteesLeft, proposal);
+            }
+            else
+            {
+                Console.WriteLine("inviteesLeft is null");
+            }
             _knownMeetingProposals.Add(proposal.Topic, proposal);
             Console.WriteLine("Received proposal with topic: {0}", proposal.Topic);
         }

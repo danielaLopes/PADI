@@ -43,6 +43,8 @@ namespace Server
         /// </summary>
         private ConcurrentDictionary<string, IClient> _clients = new ConcurrentDictionary<string, IClient>();
 
+        private List<string> _clientUrls = new List<string>();
+
         /// <summary>
         /// Max number of faults tolerated by the system ?????
         /// </summary>
@@ -102,9 +104,6 @@ namespace Server
             _minDelay = minDelay;
             _maxDelay = maxDelay;
 
-            _sendAllInvitationsDelegate = new SendAllInvitationsDelegate(SendAllInvitations);
-            _sendInvitationsDelegate = new InvitationDelegate(SendInvitationToClient);
-
             _broadcastNewMeetingDelegate = new BroadcastNewMeetingDelegate(BroadcastNewMeetingToServer);
             _broadcastJoinDelegate = new BroadcastJoinDelegate(BroadcastJoinToServer);
             _broadcastCloseDelegate = new BroadcastCloseDelegate(BroadcastCloseToServer);
@@ -120,12 +119,22 @@ namespace Server
             // obtain client remote object
             if (_clients.TryAdd(username, (IClient)Activator.GetObject(typeof(IClient), clientUrl)))
             {
+                lock(_clientUrls)
+                {
+                    _clientUrls.Add(clientUrl);
+                }
                 Console.WriteLine("New user {0} with url {0} registered.", username, clientUrl);
             }
             else
             {
                 Console.WriteLine("not possible to register user {0} with URL: {1}. Try again", username, clientUrl);
             }
+            BroadcastNewClient(clientUrl);
+        }
+
+        public List<string> AskForUpdateClients()
+        {
+            return _clientUrls;
         }
 
         public void Create(MeetingProposal proposal)
@@ -135,8 +144,7 @@ namespace Server
             if (_currentMeetingProposals.TryAdd(proposal.Topic, proposal))
             {
                 Console.WriteLine("Created new meeting proposal for " + proposal.Topic + ".");
-                //_sendAllInvitationsDelegate.BeginInvoke(proposal, SendAllInvitationsCallback, null);
-                BroadcastNewMeeting(proposal);
+                BroadcastNewMeeting(proposal); 
             }
             else
             {
@@ -290,60 +298,21 @@ namespace Server
 
         // ------------------- COMMUNICATION WITH OTHER SERVERS -------------------
         // servers should send updates to other servers so that they maintain the state distributed
-
-        // TODO all invitations now should be sent by client
-        public void SendAllInvitations(MeetingProposal proposal)
+        public void BroadcastNewClient(string url)
         {
-
-            if (proposal.Invitees == null)
+            foreach (KeyValuePair<string, IServer> server in _servers)
             {
-                foreach (KeyValuePair<string, IClient> client in _broadcastClients)
-                {
-                    _sendInvitationsDelegate.BeginInvoke(client.Value, proposal, client.Key, SendInvitationCallback, null);
-                }
-            }
-            else
-            {
-                foreach (string username in proposal.Invitees)
-                {
-                    if (username != proposal.Coordinator)
-                    {
-                        while (!_broadcastClients.ContainsKey(username))
-                        {
-                            Console.WriteLine("user {0} not present. going to wait", username);
-                            Thread.Sleep(500);
-                        }
-
-                        IClient invitee = _broadcastClients[username];
-                        _sendInvitationsDelegate.BeginInvoke(invitee, proposal, username, SendInvitationCallback, null);
-
-                        Console.WriteLine("Sent invitation to user {0}", username);
-                        // CHECK IF BROADCAST CLIENTS CONTAIS ALL INVITEES
-                        // IF NOT, CHANGE USER SERVER
-                    }
-                }
+                server.Value.ReceiveNewClient(url);
             }
         }
 
-        // TODO invitations now must be sent by a client to other clients
-        public void SendInvitationToClient(IClient user, MeetingProposal proposal, string username)
+        public void ReceiveNewClient(string url)
         {
-            Console.WriteLine("going to send invitation to {0}", username);
-            user.ReceiveInvitation(proposal);
-        }
-
-        // TODO
-        public void SendAllInvitationsCallback(IAsyncResult res)
-        {
-            // _sendAllInvitationsDelegate.EndInvoke(res);
-            Console.WriteLine("finished sending all invitations");
-        }
-
-        // TODO
-        public void SendInvitationCallback(IAsyncResult res)
-        {
-            //_sendInvitationsDelegate.EndInvoke(res);
-            Console.WriteLine("finished sending invitation");
+            lock(_clientUrls)
+            {
+                _clientUrls.Add(url);
+                Console.WriteLine("Receive new user with url {0}", url);
+            }
         }
 
         public void BroadcastNewMeeting(MeetingProposal proposal)

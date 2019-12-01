@@ -9,13 +9,11 @@ namespace ClassLibrary
         // methods to be used by servers
         void UpdateList(Dictionary<string,MeetingProposal> proposals);
 
-        void ReceiveInvitation(MeetingProposal proposal);
-
         void SwitchServer(string url);
 
-        // methods to be used by other clients
-        IClient RegisterClient(string name, string clientUrl);
+        void UpdateClients(List<string> urls);
 
-        void ReceiveClientsList(List<string> otherClientUrls);  
+        // methods to be used by other clients
+        void ReceiveInvitation(MeetingProposal proposal, List<string> inviteesLeft = null);
     }
 }
