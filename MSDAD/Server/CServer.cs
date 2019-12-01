@@ -1,3 +1,4 @@
+
 using System;
 using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels;
@@ -44,6 +45,13 @@ namespace Server
         private ConcurrentDictionary<string, IClient> _clients = new ConcurrentDictionary<string, IClient>();
 
         private List<string> _clientUrls = new List<string>();
+
+        /// <summary>
+        /// Simulates a collection of vector clocks
+        /// key: String corresponding to meeting topic
+        /// Value: Vector clock
+        /// </summary>
+        private ConcurrentDictionary<String, VectorClock> _meetingsClocks = new ConcurrentDictionary<String, VectorClock>();
 
         /// <summary>
         /// Max number of faults tolerated by the system ?????
@@ -135,6 +143,7 @@ namespace Server
         public List<string> AskForUpdateClients()
         {
             return _clientUrls;
+
         }
 
         public void Create(MeetingProposal proposal)
@@ -143,7 +152,12 @@ namespace Server
 
             if (_currentMeetingProposals.TryAdd(proposal.Topic, proposal))
             {
+                // we create a new vector clock for the new meeting
+                _meetingsClocks[proposal.Topic] = new VectorClock(SERVER_URL, _servers.Keys);
+                _meetingsClocks[proposal.Topic].printVectorClock(proposal.Topic);
+
                 Console.WriteLine("Created new meeting proposal for " + proposal.Topic + ".");
+
                 BroadcastNewMeeting(proposal); 
             }
             else
@@ -172,11 +186,9 @@ namespace Server
         public void Join(string username, string topic, MeetingRecord record)
         {
             Thread.Sleep(RandomIncomingMessageDelay());
-         
             MeetingProposal proposal;
             if (!_currentMeetingProposals.TryGetValue(topic, out proposal))
             {
-                
                 // if the server does not have a meeting, he tells the client to switch to a different server
                 AttributeNewServer(username);
             }
@@ -190,6 +202,10 @@ namespace Server
                     if (!proposal.FailedRecords.Contains(record))
                     {
                         proposal.AddFailedRecord(record);
+
+                        // we update the respective vector clock
+                        incrementVectorClock(topic);
+
                         BroadcastJoin(username, proposal, record);
                     }
                 }
@@ -206,8 +222,13 @@ namespace Server
                         }
                     }
                     proposal.AddMeetingRecord(record);
+
+                    // we update the respective vector clock
+                    incrementVectorClock(topic);
+
                     BroadcastJoin(username, proposal, record);
                 }
+
                 Console.WriteLine(record.Name + " joined meeting proposal " + proposal.Topic + ".");
             }
         }
@@ -293,12 +314,16 @@ namespace Server
             }
             Console.WriteLine(proposal.Coordinator + " closed meeting proposal " + proposal.Topic + ".");
 
+            // we update the respective vector clock
+            incrementVectorClock(topic);
             BroadcastClose(proposal);
         }
 
 
         // ------------------- COMMUNICATION WITH OTHER SERVERS -------------------
         // servers should send updates to other servers so that they maintain the state distributed
+
+
         public void BroadcastNewClient(string url)
         {
             foreach (KeyValuePair<string, IServer> server in _servers)
@@ -346,8 +371,10 @@ namespace Server
 
         public string BroadcastNewMeetingToServer(IServer server, string url, MeetingProposal proposal)
         {
-            Console.WriteLine("going to send new meeting {0}", proposal.Topic);
-            server.ReceiveNewMeeting(proposal);
+            Console.WriteLine("going to inform server of new meeting {0}", proposal.Topic);
+            server.ReceiveNewMeeting(proposal, _meetingsClocks[proposal.Topic]);
+
+
             return url;
         }
 
@@ -365,14 +392,18 @@ namespace Server
             }
         }
 
-        public void ReceiveNewMeeting(MeetingProposal meeting)
+        public void ReceiveNewMeeting(MeetingProposal meeting, VectorClock vector)
         {
             Thread.Sleep(RandomIncomingMessageDelay());
             //Thread.Sleep(10000);
             if (_currentMeetingProposals.TryAdd(meeting.Topic, meeting))
             {
-                Console.WriteLine("received new meeting {0}", meeting.Topic);
-                BroadcastNewMeeting(meeting);
+                _meetingsClocks[meeting.Topic] = vector;
+                Console.WriteLine("received new meeting {0}.", meeting.Topic);
+                Console.WriteLine("ALL TIME CLOCKS:");
+                foreach (KeyValuePair<String, VectorClock> pair in _meetingsClocks)
+                    pair.Value.printVectorClock(pair.Key);
+
             }
             /*else
             {
@@ -395,7 +426,7 @@ namespace Server
         public string BroadcastJoinToServer(IServer server, string url, string username, MeetingProposal proposal, MeetingRecord record)
         {
             Console.WriteLine("going to send join {0}", proposal.Topic);
-            server.ReceiveJoin(username, proposal, record);
+            server.ReceiveJoin(username, proposal, record, _meetingsClocks[proposal.Topic]);
             return url;
         }
 
@@ -413,13 +444,14 @@ namespace Server
             }
         }
 
-        public void ReceiveJoin(string username, MeetingProposal proposal, MeetingRecord record)
+        public void ReceiveJoin(string username, MeetingProposal proposal, MeetingRecord record, VectorClock newVector)
         {
             Thread.Sleep(RandomIncomingMessageDelay());
 
             Console.WriteLine("received join {0}", proposal.Topic);
 
             MeetingProposal previousProposal;
+
             if (_currentMeetingProposals.TryGetValue(proposal.Topic, out previousProposal))
             {
                 if (!previousProposal.Records.ContainsKey(record.Name))
@@ -436,6 +468,10 @@ namespace Server
                 Console.WriteLine("bye");
                 _currentMeetingProposals[proposal.Topic] = proposal;
             }
+
+            // UPDATE VECTOR CLOCK
+            updateVectorClock(proposal, newVector);
+
         }
 
         public void BroadcastClose(MeetingProposal proposal)
@@ -449,7 +485,7 @@ namespace Server
         public void BroadcastCloseToServer(IServer server, MeetingProposal proposal)
         {
             Console.WriteLine("going to send close {0}", proposal.Topic);
-            server.ReceiveClose(proposal);
+            server.ReceiveClose(proposal, _meetingsClocks[proposal.Topic]);
         }
 
         public void BroadcastCloseCallback(IAsyncResult res)
@@ -458,12 +494,15 @@ namespace Server
             Console.WriteLine("finished sending close");
         }
 
-        public void ReceiveClose(MeetingProposal proposal)
+        public void ReceiveClose(MeetingProposal proposal, VectorClock newVector)
         {
             Thread.Sleep(RandomIncomingMessageDelay());
 
             Console.WriteLine("received close {0}", proposal.Topic);
             _currentMeetingProposals[proposal.Topic] = proposal;
+
+            // UPDATE VECTOR CLOCK
+            updateVectorClock(proposal, newVector);
         }
 
         public void BroadcastUpdateLocation(Location location)
@@ -492,6 +531,74 @@ namespace Server
 
             Console.WriteLine("received updated location {0}", location.Name);
             _locations[location.Name] = location;
+        }
+
+        // ------------------- VECTOR CLOCK -------------------
+
+        public void incrementVectorClock(String meeting)
+        {
+
+            _meetingsClocks[meeting].incrementVectorClock(SERVER_URL);
+            _meetingsClocks[meeting].printVectorClock(meeting);
+        }
+
+        public void updateVectorClock(MeetingProposal proposal, VectorClock newVector)
+        {
+            Console.WriteLine("UPDATE VECTOR CLOCK");
+            // VECTOR CLOCK UPDATE
+            VectorClock updatedMeetingVector; // after receiving the new operation, this will be the resulting vector clock
+            if (_meetingsClocks.TryGetValue(proposal.Topic, out updatedMeetingVector))
+            {
+                Console.WriteLine("MEETING CLOCK DA MEETING {0} EXISTE.", proposal.Topic);
+                // this server knows this meeting
+                foreach (KeyValuePair<String, int> clock in _meetingsClocks[proposal.Topic]._currentVectorClock)
+                {
+                    Console.WriteLine("GONNA COMPARE CLOCK OF SERVER {0} ", clock.Key);
+                    // if the received clock is only one step ahead we only need to do a simple update
+                    if (newVector._currentVectorClock[clock.Key] - clock.Value == 1)
+                    {
+                        Console.WriteLine("RECEIVED CLOCK IS ONE STEP AHEAD");
+                        updatedMeetingVector._currentVectorClock[clock.Key] = newVector._currentVectorClock[clock.Key];
+                    }
+                    // if the received clock is more than one step ahead we need to request the missing information
+                    else if (newVector._currentVectorClock[clock.Key] - clock.Value > 1)
+                    {
+                        Console.WriteLine("RECEIVED CLOCK IS MORE THAN 1 STEP AHEAD");
+                        // TO DO
+                        // REQUEST MISSING INFORMATION FROM THE SERVER THAT IS A FEW STEPS AHEAD, NOT FROM ALL SERVERS
+                        // getMissingInformation();
+
+                        // now that we have all the missing information we update the vector clock
+                        updatedMeetingVector._currentVectorClock[clock.Key] = newVector._currentVectorClock[clock.Key];
+                    }
+
+                    // if the received clock is behind the known we don't care
+
+                }
+            }
+            else
+            {
+                // the server doesn't know about this meeting so we need to request the missing information
+
+                // TO DO
+                // IN THIS CASE WE WILL RETRIEVE THE PREVIOUS MISSING INFORMATION FROM THE SERVER THAT SENT THE VECTOR CLOCK
+                // getMissingInformation();
+
+                // now that we have all the missing information we update the vector clock
+                foreach (KeyValuePair<String, int> clock in _meetingsClocks[proposal.Topic]._currentVectorClock)
+                {
+                    // if the received clock is only one step ahead we only need to do a simple update
+                    if (newVector._currentVectorClock[clock.Key] - clock.Value == 1)
+                    {
+                        updatedMeetingVector._currentVectorClock[clock.Key] = newVector._currentVectorClock[clock.Key];
+                    }
+                }
+            }
+
+            _meetingsClocks[proposal.Topic] = updatedMeetingVector;
+            Console.WriteLine("AFTER UPDATE ALL TIME CLOCKS:");
+            foreach (KeyValuePair<String, VectorClock> pair in _meetingsClocks)
+                pair.Value.printVectorClock(pair.Key);
         }
 
 
