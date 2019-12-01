@@ -31,9 +31,9 @@ namespace PuppetMaster
 
         public ConcurrentDictionary<string, IServer> Servers { get; set; }
         public string ServerUrls { get; set; }
+        public List<string> ServerUrlList { get; set; }
 
         public ConcurrentDictionary<string, IClient> Clients { get; set; }
-        public string ClientUrls { get; set; }
 
         /// <summary>
         /// string->base url of pcs to match with server/client's urls
@@ -63,9 +63,9 @@ namespace PuppetMaster
         {
             Servers = new ConcurrentDictionary<string, IServer>();
             ServerUrls = "";
+            ServerUrlList = new List<string>();
 
             Clients = new ConcurrentDictionary<string, IClient>();
-            ClientUrls = "";
 
             PCSs = new ConcurrentDictionary<string, ProcessCreationService>();
             foreach (string url in pcsUrls) {
@@ -152,21 +152,13 @@ namespace PuppetMaster
                 result = _startProcessDelegate.BeginInvoke(url,
                         fields + " " + Servers.Count.ToString() + " " + ServerUrls,
                         @"..\..\..\Server\bin\Debug\Server.exe", null, null);
-
-                if (Servers.TryAdd(serverId, (IServer)Activator.GetObject(typeof(IServer), url)))
-                {
-                    Console.WriteLine("Successfully added Server {0}", url);
-                }
-                else
-                {
-                    Console.WriteLine("Could not add Server {0}", url);
-                }
-
+                Servers.TryAdd(serverId, (IServer)Activator.GetObject(typeof(IServer), url));
                 ServerUrls += " " + url;
             }
-
-            Console.WriteLine("servers: " + ServerUrls);
-
+            lock (ServerUrlList)
+            {
+                ServerUrlList.Add(url);
+            }
             result.AsyncWaitHandle.WaitOne();
  
             Console.WriteLine("Server {0} created!", serverId);
@@ -175,41 +167,41 @@ namespace PuppetMaster
         // Client username client URL server URL script file
         public void ClientSync(string fields, string username, string url, string serverUrl)
         {
-            Console.WriteLine("client fields: {0}", fields); 
-
-            IAsyncResult result;
-
-            lock (ClientUrls)
-            {
-                Console.WriteLine("existem {0} clientes urls: {1}", Clients.Count.ToString(), ClientUrls);
-                result = _startProcessDelegate.BeginInvoke(url,
-                        fields + " " + ChooseBackupServer(serverUrl) + " " + 
-                        Clients.Count.ToString() + " " + ClientUrls, 
-                        @"..\..\..\Client\bin\Debug\Client.exe", null, null);
-                // TODO SEE IF TRYADD IS PROBLEMATIC
-                Clients.TryAdd(username, (IClient)Activator.GetObject(typeof(IClient), url));
-
-                ClientUrls += " " + url;
-            }
+            IAsyncResult result = _startProcessDelegate.BeginInvoke(url,
+                    fields + " " + ChooseBackupServer(serverUrl), 
+                    @"..\..\..\Client\bin\Debug\Client.exe", null, null);
+               
+            Clients.TryAdd(username, (IClient)Activator.GetObject(typeof(IClient), url));
 
             result.AsyncWaitHandle.WaitOne();
 
             Console.WriteLine("Client {0} created!", username);
         }
 
+        /// <summary>
+        /// Chooses the next server in the system to attribute as backup
+        /// server to a client, in case of client's server failing
+        /// </summary>
+        /// <param name="urlMainServer"></param>
+        /// <returns> the url of the choosen backup server </returns>
         public string ChooseBackupServer(string urlMainServer)
         {
-            List<string> serverKeys = new List<string>(Servers.Keys);
-            for (int i = 0; i< serverKeys.Count; i++)
+            lock (ServerUrlList)
             {
-                if (serverKeys[i].Equals(urlMainServer) && i != serverKeys.Count-1)
+                if (ServerUrlList[ServerUrlList.Count - 1].Equals(urlMainServer))
                 {
-                    return serverKeys[i + 1];
+                    return ServerUrlList[0];
                 }
-                else if(serverKeys[i].Equals(urlMainServer)) {
-                    return serverKeys[0];
+                for (int i = 0; i < ServerUrlList.Count - 1; i++)
+                {
+                    if (ServerUrlList[i].Equals(urlMainServer))
+                    {
+                        return ServerUrlList[i + 1];
+                    }
                 }
             }
+            // in case there's no other server to be a backup, the server
+            // returned is the same as the main client's server
             return urlMainServer;
         }
 

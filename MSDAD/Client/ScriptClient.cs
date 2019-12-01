@@ -67,20 +67,16 @@ namespace Client
         {
             CClient client;
 
-            // without PuppetMaster
             if (args.Length > 5)
             {
-                Console.WriteLine("args5 {0}", args[5]);
                 int nClients = Int32.Parse(args[5]);
                 List<string> otherClientsUrl = new List<string>();
                 for (int i = 6; i < 6 + nClients; i++)
                 {
                     otherClientsUrl.Add(args[i]);
                 }
-                
                 client = new CClient(args[0], args[1], args[2], args[4], otherClientsUrl);
             }
-            // with PuppetMaster
             else
             {
                 client = new CClient(args[0], args[1], args[2], args[4]);

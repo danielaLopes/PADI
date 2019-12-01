@@ -6,6 +6,7 @@ using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
 using System.Threading;
+using System.Collections.Concurrent;
 using ClassLibrary;
 
 namespace Client
@@ -15,7 +16,8 @@ namespace Client
         private readonly string USERNAME;
         private readonly string CLIENT_URL;
 
-        private Dictionary<string, IClient> _clients;
+        private ConcurrentDictionary<string, IClient> _clients;
+        private List<string> _knownClientUrls;
         
         // saves the meeting proposal the client knows about (created or received invitation)
         public Dictionary<string, MeetingProposal> _knownMeetingProposals;
@@ -42,21 +44,22 @@ namespace Client
             // create the client's remote object
             RemotingServices.Marshal(this, username, typeof(CClient));
 
-            Console.WriteLine("Client registered with username {0} with url {0}.", username, clientUrl);
+            Console.WriteLine("Client registered with username {0} with url {1}.", username, clientUrl);
 
             RegisterNewServer(serverUrl);
+            Console.WriteLine("Backup server assigned {0}", backupServer);
             _backupServerUrl = backupServer;
 
-            _clients = new Dictionary<string, IClient>();
+            _clients = new ConcurrentDictionary<string, IClient>();
+            _knownClientUrls = new List<string>();
 
             _knownMeetingProposals = new Dictionary<string, MeetingProposal>();
 
             // gets other client's remote objects and saves them
             if (clientsUrls != null)
             {
-                UpdateClients(clientsUrls);
+                UpdateClients(clientsUrls);  
             }
-            // else : the puppet master invokes GetMasterUpdateClients method
         }
 
         public void RegisterNewServer(string serverUrl)
@@ -65,6 +68,7 @@ namespace Client
             _remoteServer = (IServer)Activator.GetObject(typeof(IServer), serverUrl);
             // register new user in remote server
             _remoteServer.RegisterUser(USERNAME, CLIENT_URL);
+            Console.WriteLine("Registered with server {0}", serverUrl);
         }
 
         public void List()
@@ -79,6 +83,12 @@ namespace Client
 
         public void Create(string meetingTopic, string minAttendees, List<string> slots, List<string> invitees = null)
         {
+            if (_knownClientUrls.Count == 0)
+            {
+                _knownClientUrls = _remoteServer.AskForUpdateClients();
+                UpdateClients(_knownClientUrls);
+            } 
+
             List<DateLocation> parsedSlots = ParseSlots(slots);
             List<string> parsedInvitees = invitees;
             
@@ -100,15 +110,13 @@ namespace Client
 
             _knownMeetingProposals.Add(proposal.Topic, proposal);
 
-            // TODO
-            if (invitees != null)
+            if (invitees == null)
             {
-                // send to all invitees
+                SendInvitations(new List<string>(_clients.Keys), proposal);
             }
             else
             {
-                Console.WriteLine("invitees:" + invitees);
-                // send to every client
+                SendInvitations(invitees, proposal);
             }
 
         }
@@ -141,7 +149,6 @@ namespace Client
         public void UpdateList(Dictionary<string, MeetingProposal> proposals)
         {
             _knownMeetingProposals = proposals;
-
         }
 
         public void SwitchServer(string serverUrl)
@@ -149,32 +156,41 @@ namespace Client
             RegisterNewServer(serverUrl);
         }
 
+        /// <summary>
+        /// When client receives a list with other clients' urls 
+        /// he gets the respective remote objects
+        /// </summary>
+        /// <param name="clientsUrls"></param>
         public void UpdateClients(List<string> clientsUrls)
         {
             foreach (string url in clientsUrls)
             {
                 string name = url.Split('/')[3];
-                Console.WriteLine("client name: {0}", name);
-                UpdateClient(name, url);
+                IClient client = RegisterClient(name, url);
             }
         }
 
-        public void UpdateClient(string name, string clientUrl)
-        {
-            Console.WriteLine("Updating client {0}", clientUrl);
-
-            IClient client = RegisterClient(name, clientUrl);
-
-            client.RegisterClient(USERNAME, CLIENT_URL);
-        }
-
+        /// <summary>
+        /// Obtain the client's remote object and saves it
+        /// along with the respective client name for easy search
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="clientUrl"></param>
+        /// <returns></returns>
         public IClient RegisterClient(string name, string clientUrl)
         {
-            Console.WriteLine("Registering client {0}", clientUrl);
-
-            IClient client = (IClient)Activator.GetObject(typeof(IServer), clientUrl);
-            if (!_clients.ContainsKey(name)) _clients.Add(name, client);
-
+            Console.WriteLine("new client {0}", name);
+            IClient client = (IClient)Activator.GetObject(typeof(IClient), clientUrl);
+            _clients.TryAdd(name, client);
+            if (_clients[name] != null)
+            {
+                Console.WriteLine("client {0} correctly added", name);
+            }
+            else
+            {
+                Console.WriteLine("client {0} incorrectly added", name);
+                Thread.Sleep(2000);
+            }
             return client;
         }
 
@@ -188,8 +204,70 @@ namespace Client
 
         }
 
-        public void ReceiveInvitation(MeetingProposal proposal)
-        {    
+        public void SendInvitations(List<string> invitees, MeetingProposal proposal)
+        {
+            // assumes every client knows every other client
+
+            //int minSpreaders = 1;
+            int threshold = 2;
+
+            // easy case: there are few invitees so we can 
+            // send the invitations directly
+            if (invitees.Count < threshold)
+            {
+                foreach (string invitee in invitees)
+                {   
+                    if (!invitee.Equals(USERNAME))
+                        // no need to send inviteesLeft because the invitation
+                        // is not going to need to be propapagated anymore
+                        _clients[invitee].ReceiveInvitation(proposal);
+                }
+            }
+            // case with lots of invitees: send first directly and then
+            // those to deliver the rest of the messages
+            else
+            {
+                List<string> inviteesLeft = new List<string>();
+                foreach (string invitee in invitees.GetRange(threshold, invitees.Count-threshold))
+                {
+                    if (!invitee.Equals(USERNAME))
+                    {
+                        Console.WriteLine("{0} added to inviteesLeft", invitee);
+                        inviteesLeft.Add(invitee);
+                    }
+                }
+                foreach (string invitee in invitees.GetRange(0, threshold))
+                {
+                    Console.WriteLine("invitee {0},", invitee);
+
+                    if (!invitee.Equals(USERNAME))
+                    {
+                        _clients[invitee].ReceiveInvitation(proposal, inviteesLeft);
+                    }       
+                }
+            }
+        }
+
+        public void ReceiveInvitation(MeetingProposal proposal, List<string> inviteesLeft = null)
+        {
+            if (_knownClientUrls.Count == 0)
+            {
+                _knownClientUrls = _remoteServer.AskForUpdateClients();
+                UpdateClients(_knownClientUrls);
+            } 
+
+            if (inviteesLeft != null)
+            {
+                foreach (string invitee in inviteesLeft)
+                {
+                    Console.WriteLine("invitee in inviteesLeft {0}", invitee);
+                }
+                SendInvitations(inviteesLeft, proposal);
+            }
+            else
+            {
+                Console.WriteLine("inviteesLeft is null");
+            }
             _knownMeetingProposals.Add(proposal.Topic, proposal);
             Console.WriteLine("Received proposal with topic: {0}", proposal.Topic);
         }
