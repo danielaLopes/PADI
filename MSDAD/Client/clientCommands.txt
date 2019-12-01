@@ -1,4 +1,4 @@
 wait 3000
 create meeting1 1 2 0 Lisboa,2020-01-02 Lisboa,2010-01-03
 wait 1000
-join meeting 1 Lisboa,2020-01-02
+join meeting1 1 Lisboa,2020-01-02

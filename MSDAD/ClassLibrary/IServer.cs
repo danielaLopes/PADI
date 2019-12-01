@@ -17,6 +17,8 @@ namespace ClassLibrary
         void Unfreeze();
 
         // methods to be used by Clients
+        List<string> AskForUpdateClients();
+
         void RegisterUser(string username, string clientUrl);
 
         void Create(MeetingProposal proposal);
@@ -28,6 +30,8 @@ namespace ClassLibrary
         void Close(string topic);
 
         // methods to be used by other servers
+        void ReceiveNewClient(string url);
+
         void ReceiveNewMeeting(MeetingProposal meeting);
 
         void ReceiveJoin(string username, MeetingProposal proposal, MeetingRecord record);
