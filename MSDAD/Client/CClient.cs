@@ -6,6 +6,7 @@ using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
 using System.Threading;
+using System.Collections.Concurrent;
 using ClassLibrary;
 
 namespace Client
@@ -15,7 +16,8 @@ namespace Client
         private readonly string USERNAME;
         private readonly string CLIENT_URL;
 
-        private Dictionary<string, IClient> _clients;
+        private ConcurrentDictionary<string, IClient> _clients;
+        private List<string> _knownClientUrls;
         
         // saves the meeting proposal the client knows about (created or received invitation)
         public Dictionary<string, MeetingProposal> _knownMeetingProposals;
@@ -42,21 +44,22 @@ namespace Client
             // create the client's remote object
             RemotingServices.Marshal(this, username, typeof(CClient));
 
-            Console.WriteLine("Client registered with username {0} with url {0}.", username, clientUrl);
+            Console.WriteLine("Client registered with username {0} with url {1}.", username, clientUrl);
 
             RegisterNewServer(serverUrl);
+            Console.WriteLine("Backup server assigned {0}", backupServer);
             _backupServerUrl = backupServer;
 
-            _clients = new Dictionary<string, IClient>();
+            _clients = new ConcurrentDictionary<string, IClient>();
+            _knownClientUrls = new List<string>();
 
             _knownMeetingProposals = new Dictionary<string, MeetingProposal>();
 
             // gets other client's remote objects and saves them
             if (clientsUrls != null)
             {
-                UpdateClients(clientsUrls);
+                UpdateClients(clientsUrls);  
             }
-            // else : the puppet master invokes GetMasterUpdateClients method
         }
 
         public void RegisterNewServer(string serverUrl)
@@ -65,6 +68,7 @@ namespace Client
             _remoteServer = (IServer)Activator.GetObject(typeof(IServer), serverUrl);
             // register new user in remote server
             _remoteServer.RegisterUser(USERNAME, CLIENT_URL);
+            Console.WriteLine("Registered with server {0}", serverUrl);
         }
 
         public void List()
@@ -141,7 +145,6 @@ namespace Client
         public void UpdateList(Dictionary<string, MeetingProposal> proposals)
         {
             _knownMeetingProposals = proposals;
-
         }
 
         public void SwitchServer(string serverUrl)
@@ -149,32 +152,76 @@ namespace Client
             RegisterNewServer(serverUrl);
         }
 
+        /// <summary>
+        /// When client is initilized, he receives a list with
+        /// other clients' urls and then gets the respective
+        /// remote objects
+        /// </summary>
+        /// <param name="clientsUrls"></param>
         public void UpdateClients(List<string> clientsUrls)
         {
             foreach (string url in clientsUrls)
             {
                 string name = url.Split('/')[3];
-                Console.WriteLine("client name: {0}", name);
-                UpdateClient(name, url);
+                IClient client = RegisterClient(name, url);
+                if (client != null) client.RegisterClient(USERNAME, CLIENT_URL);
             }
         }
 
-        public void UpdateClient(string name, string clientUrl)
+        /// <summary>
+        /// Remote method in which a client registers another client and sends 
+        /// that client itself and the clients he knows to be registered
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="clientUrl"></param>
+        /// <param name="otherClientUrls"></param>
+        public void BroadcastNewClient(string name, string url)
         {
-            Console.WriteLine("Updating client {0}", clientUrl);
-
-            IClient client = RegisterClient(name, clientUrl);
-
-            client.RegisterClient(USERNAME, CLIENT_URL);
+            List<KeyValuePair<string, IClient>> knownClients = new List<KeyValuePair<string, IClient>>(_clients);
+            foreach (KeyValuePair<string, IClient> knownClient in knownClients)
+            {   
+                if (!knownClient.Key.Equals(name))
+                {
+                    knownClient.Value.RegisterClient(name, url);
+                }
+            }
         }
 
+        public void ReceiveClientsList(List<string> urls)
+        {
+            foreach(string url in urls)
+            {   if (!url.Equals(CLIENT_URL))
+                {
+                    string name = url.Split('/')[3];
+                    RegisterClient(name, url);
+                }            
+            }
+        }
+
+        /// <summary>
+        /// Obtain the client's remote object and saves it
+        /// along with the respective client name for easy search
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="clientUrl"></param>
+        /// <returns></returns>
         public IClient RegisterClient(string name, string clientUrl)
         {
-            Console.WriteLine("Registering client {0}", clientUrl);
+            IClient client = null;
+            
+            if (!_clients.ContainsKey(name) && !name.Equals(USERNAME))
+            {
+                Console.WriteLine("new client {0}", name);
+                client = (IClient)Activator.GetObject(typeof(IClient), clientUrl);
+                lock(_knownClientUrls)
+                {
+                    client.ReceiveClientsList(_knownClientUrls);
+                    _clients.TryAdd(name, client);
+                    _knownClientUrls.Add(clientUrl);
+                }
 
-            IClient client = (IClient)Activator.GetObject(typeof(IServer), clientUrl);
-            if (!_clients.ContainsKey(name)) _clients.Add(name, client);
-
+                BroadcastNewClient(name, clientUrl);
+            }
             return client;
         }
 
@@ -186,6 +233,37 @@ namespace Client
         public void ShutDown()
         {
 
+        }
+
+        public void SendInvitations(List<string> invitees, MeetingProposal proposal)
+        {
+            int minSpreaders = 1;
+            int threshold = 10;
+
+            List<IClient> directMessages = new List<IClient>();
+            foreach (string invitee in invitees)
+            {
+                if (_clients.ContainsKey(invitee))
+                {
+                    directMessages.Add(_clients[invitee]);
+                }
+            }
+            if (directMessages.Count >= minSpreaders)
+            {
+                foreach (IClient client in directMessages)
+                {
+                    client.ReceiveInvitation(proposal);
+                }
+                return;
+            }
+
+            int nSends = 0;
+            foreach (KeyValuePair<string, IClient> client in _clients)
+            {
+                if (nSends >= threshold) return;
+                client.Value.ReceiveInvitation(proposal);
+                nSends++;
+            }
         }
 
         public void ReceiveInvitation(MeetingProposal proposal)

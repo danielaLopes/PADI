@@ -14,6 +14,8 @@ namespace ClassLibrary
         void SwitchServer(string url);
 
         // methods to be used by other clients
-        IClient RegisterClient(string name, string serverUrl);
+        IClient RegisterClient(string name, string clientUrl);
+
+        void ReceiveClientsList(List<string> otherClientUrls);  
     }
 }
