@@ -28,11 +28,11 @@ namespace ClassLibrary
         void Close(string topic);
 
         // methods to be used by other servers
-        void ReceiveNewMeeting(MeetingProposal meeting);
+        void ReceiveNewMeeting(MeetingProposal meeting, VectorClock newVector);
 
-        void ReceiveJoin(string username, MeetingProposal proposal, MeetingRecord record);
+        void ReceiveJoin(string username, MeetingProposal proposal, MeetingRecord record, VectorClock newVector);
 
-        void ReceiveClose(MeetingProposal proposal);
+        void ReceiveClose(MeetingProposal proposal, VectorClock newVector);
 
         void ReceiveUpdateLocation(Location location);
 

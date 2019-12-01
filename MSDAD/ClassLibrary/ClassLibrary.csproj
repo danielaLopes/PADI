@@ -63,6 +63,7 @@
   <ItemGroup>
     <Compile Include="BaseUrlExtractor.cs" />
     <Compile Include="ISystemNode.cs" />
+    <Compile Include="OperationsLog.cs" />
     <Compile Include="PortExtractor.cs" />
     <Compile Include="DateLocation.cs" />
     <Compile Include="IClient.cs" />

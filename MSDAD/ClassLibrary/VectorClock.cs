@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace ClassLibrary
 {
+    [Serializable]
     public class VectorClock
     {
         /// <summary>
@@ -14,7 +15,7 @@ namespace ClassLibrary
         /// key: String corresponding to server url
         /// Value: int corresponding to relative time
         /// </summary>
-        private ConcurrentDictionary<String, int> _currentVectorClock = new ConcurrentDictionary<String, int>();
+        public ConcurrentDictionary<String, int> _currentVectorClock { get; set; } = new ConcurrentDictionary<String, int>();
 
         public VectorClock(String selfUrl, ICollection<String> otherUrls)
         {
@@ -23,7 +24,7 @@ namespace ClassLibrary
                 _currentVectorClock[url] = 0;
         }
 
-        public void updateVectorClock(String serverUrl)
+        public void incrementVectorClock(String serverUrl)
         {
             _currentVectorClock[serverUrl]++;
         }
