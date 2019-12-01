@@ -13,7 +13,7 @@ namespace Server
     public delegate void SendAllInvitationsDelegate(MeetingProposal proposal);
     public delegate void InvitationDelegate(IClient user, MeetingProposal proposal, string userName);
 
-    public delegate void BroadcastNewMeetingDelegate(IServer server, MeetingProposal proposal);
+    public delegate string BroadcastNewMeetingDelegate(IServer server, string url, MeetingProposal proposal);
     public delegate void BroadcastJoinDelegate(IServer server, string username, MeetingProposal proposal, MeetingRecord record);
     public delegate void BroadcastCloseDelegate(IServer server, MeetingProposal proposal);
     public delegate void BroadcastUpdateLocationDelegate(IServer server, Location location);
@@ -62,6 +62,8 @@ namespace Server
         private BroadcastJoinDelegate _broadcastJoinDelegate;
         private BroadcastCloseDelegate _broadcastCloseDelegate;
         private BroadcastUpdateLocationDelegate _broadcastUpdateLocationDelegate;
+
+        //int n_acks = 0;
 
 
         /// <summary>
@@ -133,7 +135,7 @@ namespace Server
             if (_currentMeetingProposals.TryAdd(proposal.Topic, proposal))
             {
                 Console.WriteLine("Created new meeting proposal for " + proposal.Topic + ".");
-                _sendAllInvitationsDelegate.BeginInvoke(proposal, SendAllInvitationsCallback, null);
+                //_sendAllInvitationsDelegate.BeginInvoke(proposal, SendAllInvitationsCallback, null);
                 BroadcastNewMeeting(proposal);
             }
             else
@@ -346,35 +348,66 @@ namespace Server
 
         public void BroadcastNewMeeting(MeetingProposal proposal)
         {
+            int n_acks = 0;
+            List<IAsyncResult> res = new List<IAsyncResult>();
+            List<bool> res_bool = new List<bool>();
             foreach (KeyValuePair<string, IServer> server in _servers)
             {
-                _broadcastNewMeetingDelegate.BeginInvoke(server.Value, proposal, BroadcastNewMeetingCallback, null);
+                res.Add(_broadcastNewMeetingDelegate.BeginInvoke(server.Value, server.Key, proposal, BroadcastNewMeetingCallback, null));
+                res_bool.Add(false);
+           
+                
             }
+
+            /*while (n_acks < 1)
+            {
+                Console.WriteLine(".");
+                for (int i = 0; i < res.Count(); i++)// result in res)
+                    if (res[i].IsCompleted && !res_bool[i]) 
+                    {
+                        n_acks++;
+                        res_bool[i] = true;
+                    }
+            }*/
+
+            
+            //Console.WriteLine("acks "+n_acks);
         }
 
-        public void BroadcastNewMeetingToServer(IServer server, MeetingProposal proposal)
+        public string BroadcastNewMeetingToServer(IServer server, string url, MeetingProposal proposal)
         {
             Console.WriteLine("going to send new meeting {0}", proposal.Topic);
             server.ReceiveNewMeeting(proposal);
+            return url;
         }
 
         public void BroadcastNewMeetingCallback(IAsyncResult res)
         {
-            _broadcastNewMeetingDelegate.EndInvoke(res);
-            Console.WriteLine("finished sending new meeting");
+            /*int acks = 0;*/
+            try
+            {
+                string returnValue = _broadcastNewMeetingDelegate.EndInvoke(res);
+                Console.WriteLine("finished sending new meeting to " + returnValue);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
         }
 
         public void ReceiveNewMeeting(MeetingProposal meeting)
         {
             Thread.Sleep(RandomIncomingMessageDelay());
+            //Thread.Sleep(10000);
             if (_currentMeetingProposals.TryAdd(meeting.Topic, meeting))
             {
                 Console.WriteLine("received new meeting {0}", meeting.Topic);
+                BroadcastNewMeeting(meeting);
             }
-            else
+            /*else
             {
                 Console.WriteLine("not possible to receive new meeting {0}", meeting.Topic);
-            }
+            }*/
         }
 
         public void BroadcastJoin(string username, MeetingProposal proposal)
