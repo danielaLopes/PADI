@@ -14,7 +14,7 @@ namespace Server
     public delegate void InvitationDelegate(IClient user, MeetingProposal proposal, string userName);
 
     public delegate string BroadcastNewMeetingDelegate(IServer server, string url, MeetingProposal proposal);
-    public delegate void BroadcastJoinDelegate(IServer server, string username, MeetingProposal proposal, MeetingRecord record);
+    public delegate string BroadcastJoinDelegate(IServer server, string url, string username, MeetingProposal proposal, MeetingRecord record);
     public delegate void BroadcastCloseDelegate(IServer server, MeetingProposal proposal);
     public delegate void BroadcastUpdateLocationDelegate(IServer server, Location location);
 
@@ -181,7 +181,7 @@ namespace Server
                     if (!proposal.FailedRecords.Contains(record))
                     {
                         proposal.AddFailedRecord(record);
-                        BroadcastJoin(username, proposal);
+                        BroadcastJoin(username, proposal, record);
                     }
                 }
                 else
@@ -197,7 +197,7 @@ namespace Server
                         }
                     }
                     proposal.AddMeetingRecord(record);
-                    BroadcastJoin(username, proposal);
+                    BroadcastJoin(username, proposal, record);
                 }
                 Console.WriteLine(record.Name + " joined meeting proposal " + proposal.Topic + ".");
             }
@@ -410,25 +410,38 @@ namespace Server
             }*/
         }
 
-        public void BroadcastJoin(string username, MeetingProposal proposal)
+        public void BroadcastJoin(string username, MeetingProposal proposal, MeetingRecord record)
         {
+            List<IAsyncResult> res = new List<IAsyncResult>();
+            List<bool> res_bool = new List<bool>();
+
             foreach (KeyValuePair<string, IServer> server in _servers)
             {
-                _broadcastCloseDelegate.BeginInvoke(server.Value, proposal, null, null);
+                res.Add(_broadcastJoinDelegate.BeginInvoke(server.Value, server.Key, username, proposal, record, BroadcastJoinCallback, null));
+                res_bool.Add(false);
             }
         }
 
-        public void BroadcastJoinToServer(IServer server, string username, MeetingProposal proposal, MeetingRecord record)
+        public string BroadcastJoinToServer(IServer server, string url, string username, MeetingProposal proposal, MeetingRecord record)
         {
             Console.WriteLine("going to send join {0}", proposal.Topic);
             server.ReceiveJoin(username, proposal, record);
+            return url;
         }
 
-        /*public void BroadcastJoinCallback(IAsyncResult res)
+        public void BroadcastJoinCallback(IAsyncResult res)
         {
-            _broadcastJoinDelegate.EndInvoke(res);
-            Console.WriteLine("finished sending join");
-        }*/
+
+            try
+            {
+                string returnValue = _broadcastJoinDelegate.EndInvoke(res);
+                Console.WriteLine("finished sending join to " + returnValue);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+        }
 
         public void ReceiveJoin(string username, MeetingProposal proposal, MeetingRecord record)
         {
