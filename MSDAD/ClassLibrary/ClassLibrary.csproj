@@ -63,12 +63,14 @@
   <ItemGroup>
     <Compile Include="BaseUrlExtractor.cs" />
     <Compile Include="ISystemNode.cs" />
+    <Compile Include="OperationsLog.cs" />
     <Compile Include="PortExtractor.cs" />
     <Compile Include="DateLocation.cs" />
     <Compile Include="IClient.cs" />
     <Compile Include="IServer.cs" />
     <Compile Include="Meeting.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="VectorClock.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
