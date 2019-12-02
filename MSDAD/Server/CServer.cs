@@ -40,6 +40,13 @@ namespace Server
         private ConcurrentDictionary<string, IServer> _servers = new ConcurrentDictionary<string, IServer>();
 
         /// <summary>
+        /// Keeps the status of the servers
+        /// key: String corresponding to server url
+        /// Value: if dead true
+        /// </summary>
+        private ConcurrentDictionary<string, bool> _serversStatus = new ConcurrentDictionary<string, bool>();
+
+        /// <summary>
         /// string->username IClient->client remote object
         /// </summary>
         private ConcurrentDictionary<string, IClient> _clients = new ConcurrentDictionary<string, IClient>();
@@ -348,9 +355,11 @@ namespace Server
             List<bool> res_bool = new List<bool>();
             foreach (KeyValuePair<string, IServer> server in _servers)
             {
-                res.Add(_broadcastNewMeetingDelegate.BeginInvoke(server.Value, server.Key, proposal, BroadcastNewMeetingCallback, null));
-                res_bool.Add(false);
-           
+                if (_serversStatus[server.Key] == false)
+                {
+                    res.Add(_broadcastNewMeetingDelegate.BeginInvoke(server.Value, server.Key, proposal, BroadcastNewMeetingCallback, server.Key));
+                    res_bool.Add(false);
+                }
                 
             }
 
@@ -388,7 +397,8 @@ namespace Server
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                Console.WriteLine("Server {0} is dead", res.AsyncState);
+                _serversStatus[(string)res.AsyncState] = true;
             }
         }
 
@@ -400,7 +410,7 @@ namespace Server
             {
                 _meetingsClocks[meeting.Topic] = vector;
                 Console.WriteLine("received new meeting {0}.", meeting.Topic);
-                Console.WriteLine("ALL TIME CLOCKS:");
+                //Console.WriteLine("ALL TIME CLOCKS:");
                 foreach (KeyValuePair<String, VectorClock> pair in _meetingsClocks)
                     pair.Value.printVectorClock(pair.Key);
                 BroadcastNewMeeting(meeting);
@@ -418,8 +428,11 @@ namespace Server
 
             foreach (KeyValuePair<string, IServer> server in _servers)
             {
-                res.Add(_broadcastJoinDelegate.BeginInvoke(server.Value, server.Key, username, proposal, record, BroadcastJoinCallback, null));
-                res_bool.Add(false);
+                if (_serversStatus[server.Key] == false)
+                {
+                    res.Add(_broadcastJoinDelegate.BeginInvoke(server.Value, server.Key, username, proposal, record, BroadcastJoinCallback, null));
+                    res_bool.Add(false);
+                }
             }
         }
 
@@ -440,7 +453,8 @@ namespace Server
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                Console.WriteLine("Server {0} is dead", res.AsyncState);
+                _serversStatus[(string)res.AsyncState] = true;
             }
         }
 
@@ -478,8 +492,11 @@ namespace Server
 
             foreach (KeyValuePair<string, IServer> server in _servers)
             {
-                res.Add(_broadcastCloseDelegate.BeginInvoke(server.Value, server.Key, proposal, BroadcastCloseCallback, null));
-                res_bool.Add(false);
+                if (_serversStatus[server.Key] == false)
+                {
+                    res.Add(_broadcastCloseDelegate.BeginInvoke(server.Value, server.Key, proposal, BroadcastCloseCallback, null));
+                    res_bool.Add(false);
+                }
             }
         }
 
@@ -499,7 +516,8 @@ namespace Server
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                Console.WriteLine("Server {0} is dead", res.AsyncState);
+                _serversStatus[(string)res.AsyncState] = true;
             }
         }
 
@@ -702,8 +720,11 @@ namespace Server
             Console.WriteLine("Registering server {0}", serverUrl);
 
             IServer server = (IServer)Activator.GetObject(typeof(IServer), serverUrl);
-            if(!_servers.ContainsKey(serverUrl)) _servers.TryAdd(serverUrl, server);
-
+            if (!_servers.ContainsKey(serverUrl))
+            {
+                _servers.TryAdd(serverUrl, server);
+                _serversStatus.TryAdd(serverUrl, false);
+            }
             return server;
         }
 
