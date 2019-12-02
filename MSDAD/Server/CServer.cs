@@ -16,7 +16,7 @@ namespace Server
 
     public delegate string BroadcastNewMeetingDelegate(IServer server, string url, MeetingProposal proposal);
     public delegate string BroadcastJoinDelegate(IServer server, string url, string username, MeetingProposal proposal, MeetingRecord record);
-    public delegate void BroadcastCloseDelegate(IServer server, MeetingProposal proposal);
+    public delegate string BroadcastCloseDelegate(IServer server, string url, MeetingProposal proposal);
     public delegate void BroadcastUpdateLocationDelegate(IServer server, Location location);
 
     public class CServer : MarshalByRefObject, IServer
@@ -403,7 +403,7 @@ namespace Server
                 Console.WriteLine("ALL TIME CLOCKS:");
                 foreach (KeyValuePair<String, VectorClock> pair in _meetingsClocks)
                     pair.Value.printVectorClock(pair.Key);
-
+                BroadcastNewMeeting(meeting);
             }
             /*else
             {
@@ -454,19 +454,16 @@ namespace Server
 
             if (_currentMeetingProposals.TryGetValue(proposal.Topic, out previousProposal))
             {
-                if (!previousProposal.Records.ContainsKey(record.Name))
+                if (!previousProposal.Records.ContainsKey(record.Name)) //stop condition request already received
                 {
-                    Console.WriteLine("hi");
-                    //if (previousProposal.MeetingStatus == MeetingStatus.CLOSED)
-                    //{
-                        Join(username, proposal.Topic, record);
-                   // }
+                    _currentMeetingProposals[proposal.Topic] = proposal;
+                    BroadcastJoin(username, proposal, record);
+                    //Join(username, proposal.Topic, record);
                 }
             }
             else
             {
-                Console.WriteLine("bye");
-                _currentMeetingProposals[proposal.Topic] = proposal;
+                _currentMeetingProposals.TryAdd(proposal.Topic, proposal);
             }
 
             // UPDATE VECTOR CLOCK
@@ -476,22 +473,34 @@ namespace Server
 
         public void BroadcastClose(MeetingProposal proposal)
         {
+            List<IAsyncResult> res = new List<IAsyncResult>();
+            List<bool> res_bool = new List<bool>();
+
             foreach (KeyValuePair<string, IServer> server in _servers)
             {
-                _broadcastCloseDelegate.BeginInvoke(server.Value, proposal, BroadcastCloseCallback, null);
+                res.Add(_broadcastCloseDelegate.BeginInvoke(server.Value, server.Key, proposal, BroadcastCloseCallback, null));
+                res_bool.Add(false);
             }
         }
 
-        public void BroadcastCloseToServer(IServer server, MeetingProposal proposal)
+        public string BroadcastCloseToServer(IServer server, string url, MeetingProposal proposal)
         {
             Console.WriteLine("going to send close {0}", proposal.Topic);
             server.ReceiveClose(proposal, _meetingsClocks[proposal.Topic]);
+            return url;
         }
 
         public void BroadcastCloseCallback(IAsyncResult res)
         {
-            _broadcastCloseDelegate.EndInvoke(res);
-            Console.WriteLine("finished sending close");
+            try
+            {
+                string returnValue = _broadcastCloseDelegate.EndInvoke(res);
+                Console.WriteLine("finished sending close to " + returnValue);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
         }
 
         public void ReceiveClose(MeetingProposal proposal, VectorClock newVector)
@@ -499,7 +508,17 @@ namespace Server
             Thread.Sleep(RandomIncomingMessageDelay());
 
             Console.WriteLine("received close {0}", proposal.Topic);
-            _currentMeetingProposals[proposal.Topic] = proposal;
+            MeetingProposal previousProposal;
+
+            if (_currentMeetingProposals.TryGetValue(proposal.Topic, out previousProposal))
+            {
+                if (previousProposal.MeetingStatus != MeetingStatus.CLOSED)
+                {
+                    _currentMeetingProposals[proposal.Topic] = proposal;
+                    BroadcastClose(proposal);
+                }
+            }
+            else _currentMeetingProposals.TryAdd(proposal.Topic, proposal);
 
             // UPDATE VECTOR CLOCK
             updateVectorClock(proposal, newVector);
