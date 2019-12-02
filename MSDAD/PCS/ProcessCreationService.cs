@@ -66,6 +66,13 @@ namespace PCS
             process.Close();
         }
 
+        /*public void Freeze(string serverId)
+        {
+            Console.WriteLine("Freezing server {0}", serverId);
+            Process process = Process.GetProcessById(_processes[serverId]);
+            process.Suspend();
+        }*/
+
         static void Main(string[] args)
         {
             new ProcessCreationService();
@@ -74,4 +81,5 @@ namespace PCS
             System.Console.ReadLine();
         }
     }
+   
 }

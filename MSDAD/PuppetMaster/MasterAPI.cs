@@ -300,13 +300,15 @@ namespace PuppetMaster
         // Freeze server id
         public void FreezeSync(string fields)
         {
-
+            Servers[fields].Freeze();
         }
 
         // Unfreeze server id
         public void UnfreezeSync(string fields)
         {
-
+            Console.WriteLine("before unfreeze");
+            Servers[fields].Unfreeze();
+            Console.WriteLine("after unfreeze");
         }
 
         public void ShutDownSystemSync()
