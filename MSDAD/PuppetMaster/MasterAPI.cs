@@ -10,7 +10,7 @@ using PCS;
 
 namespace PuppetMaster
 {
-    delegate void StartProcessDelegate(string pcsBaseUrl, string fields, string exePath);
+    delegate void StartProcessDelegate(string pcsBaseUrl, string fields, string exePath, string id);
 
     delegate void ServerDelegate(string fields, string serverId, string url);
     delegate void ClientDelegate(string fields, string username, string url, string serverUrl);
@@ -29,9 +29,15 @@ namespace PuppetMaster
         private const int PCS_PORT = 10000;
         private const string PCS_NAME = "pcs";
 
+        /// <summary>
+        /// key->serverId value->remoteObject
+        /// </summary>
         public ConcurrentDictionary<string, IServer> Servers { get; set; }
         public string ServerUrls { get; set; }
-        public List<string> ServerUrlList { get; set; }
+        /// <summary>
+        /// key->serverId value->serverUrl
+        /// </summary>
+        public ConcurrentDictionary<string, string> ServerIdsToUrls { get; set; }
 
         public ConcurrentDictionary<string, IClient> Clients { get; set; }
 
@@ -63,7 +69,7 @@ namespace PuppetMaster
         {
             Servers = new ConcurrentDictionary<string, IServer>();
             ServerUrls = "";
-            ServerUrlList = new List<string>();
+            ServerIdsToUrls = new ConcurrentDictionary<string, string>();
 
             Clients = new ConcurrentDictionary<string, IClient>();
 
@@ -151,14 +157,11 @@ namespace PuppetMaster
                 // sends server pre-existing servers' urls as part of the arguments
                 result = _startProcessDelegate.BeginInvoke(url,
                         fields + " " + Servers.Count.ToString() + " " + ServerUrls,
-                        @"..\..\..\Server\bin\Debug\Server.exe", null, null);
+                        @"..\..\..\Server\bin\Debug\Server.exe", serverId, null, null);
                 Servers.TryAdd(serverId, (IServer)Activator.GetObject(typeof(IServer), url));
                 ServerUrls += " " + url;
             }
-            lock (ServerUrlList)
-            {
-                ServerUrlList.Add(url);
-            }
+            ServerIdsToUrls.TryAdd(serverId, url);
             result.AsyncWaitHandle.WaitOne();
  
             Console.WriteLine("Server {0} created!", serverId);
@@ -169,7 +172,7 @@ namespace PuppetMaster
         {
             IAsyncResult result = _startProcessDelegate.BeginInvoke(url,
                     fields + " " + ChooseBackupServer(serverUrl), 
-                    @"..\..\..\Client\bin\Debug\Client.exe", null, null);
+                    @"..\..\..\Client\bin\Debug\Client.exe", username, null, null);
                
             Clients.TryAdd(username, (IClient)Activator.GetObject(typeof(IClient), url));
 
@@ -186,18 +189,16 @@ namespace PuppetMaster
         /// <returns> the url of the choosen backup server </returns>
         public string ChooseBackupServer(string urlMainServer)
         {
-            lock (ServerUrlList)
+            List<string> serverUrlList = new List<string>(ServerIdsToUrls.Keys);
+            if (serverUrlList[serverUrlList.Count - 1].Equals(urlMainServer))
             {
-                if (ServerUrlList[ServerUrlList.Count - 1].Equals(urlMainServer))
+                return serverUrlList[0];
+            }
+            for (int i = 0; i < serverUrlList.Count - 1; i++)
+            {
+                if (serverUrlList[i].Equals(urlMainServer))
                 {
-                    return ServerUrlList[0];
-                }
-                for (int i = 0; i < ServerUrlList.Count - 1; i++)
-                {
-                    if (ServerUrlList[i].Equals(urlMainServer))
-                    {
-                        return ServerUrlList[i + 1];
-                    }
+                    return serverUrlList[i + 1];
                 }
             }
             // in case there's no other server to be a backup, the server
@@ -205,12 +206,12 @@ namespace PuppetMaster
             return urlMainServer;
         }
 
-        public void StartProcess(string url, string fields, string exePath)
+        public void StartProcess(string url, string fields, string exePath, string id)
         {
             // match right PCS
             string basePcsUrl = BaseUrlExtractor.Extract(url);
             ProcessCreationService pcs = PCSs[basePcsUrl];
-            pcs.Start(@exePath, fields);
+            pcs.Start(@exePath, fields, id);
         }
 
         public void SpreadLocationsFile()
@@ -286,22 +287,28 @@ namespace PuppetMaster
         // Debugging Commands
 
 
-        // Crash server id
+        // Crash server_id
         public void CrashSync(string fields)
         {
-
+            // match right PCS
+            Console.WriteLine(fields);
+            string basePcsUrl = BaseUrlExtractor.Extract(ServerIdsToUrls["1"]);
+            ProcessCreationService pcs = PCSs[basePcsUrl];
+            pcs.Crash("1");
         }
 
         // Freeze server id
         public void FreezeSync(string fields)
         {
-
+            Servers[fields].Freeze();
         }
 
         // Unfreeze server id
         public void UnfreezeSync(string fields)
         {
-
+            Console.WriteLine("before unfreeze");
+            Servers[fields].Unfreeze();
+            Console.WriteLine("after unfreeze");
         }
 
         public void ShutDownSystemSync()

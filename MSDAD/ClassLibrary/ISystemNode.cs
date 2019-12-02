@@ -10,7 +10,5 @@ namespace ClassLibrary
     public interface ISystemNode
     {
         void Status();
-
-        void ShutDown();
     }
 }

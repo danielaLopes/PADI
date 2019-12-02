@@ -82,6 +82,21 @@ namespace Server
 
         //int n_acks = 0;
 
+        /// <summary>
+        /// Mutual exclusion mechanism to freeze threads on
+        /// freeze command from PuppetMaster
+        /// </summary>
+        private static Mutex _mutex = new Mutex();
+        /// <summary>
+        /// Bool variable to know when to unfreeze the server
+        /// </summary>
+        private bool _isFrozen = false;
+
+        /// <summary>
+        /// true -> threads running 
+        /// false -> threads not running
+        /// </summary>
+        private ManualResetEvent _manualResetEvent = new ManualResetEvent(true);
 
         /// <summary>
         /// Decides a random number for the delay of an incoming message in millisseconds
@@ -129,6 +144,7 @@ namespace Server
 
         public void RegisterUser(string username, string clientUrl) 
         {
+            while (_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
 
             // obtain client remote object
@@ -155,6 +171,7 @@ namespace Server
 
         public void Create(MeetingProposal proposal)
         {
+            while(_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
 
             if (_currentMeetingProposals.TryAdd(proposal.Topic, proposal))
@@ -165,7 +182,7 @@ namespace Server
 
                 Console.WriteLine("Created new meeting proposal for " + proposal.Topic + ".");
 
-                BroadcastNewMeeting(proposal); 
+                BroadcastNewMeeting(proposal);
             }
             else
             {
@@ -175,6 +192,7 @@ namespace Server
 
         public void List(string name, Dictionary<string,MeetingProposal> knownProposals)
         {
+            while (_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
 
             Dictionary<string,MeetingProposal> proposals = new Dictionary<string, MeetingProposal>();
@@ -192,6 +210,7 @@ namespace Server
 
         public void Join(string username, string topic, MeetingRecord record)
         {
+            while (_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
             MeetingProposal proposal;
             if (!_currentMeetingProposals.TryGetValue(topic, out proposal))
@@ -242,6 +261,7 @@ namespace Server
 
         public void Close(string topic)
         {
+            while (_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
 
             MeetingProposal proposal = _currentMeetingProposals[topic];
@@ -404,8 +424,9 @@ namespace Server
 
         public void ReceiveNewMeeting(MeetingProposal meeting, VectorClock vector)
         {
+            while (_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
-            //Thread.Sleep(10000);
+
             if (_currentMeetingProposals.TryAdd(meeting.Topic, meeting))
             {
                 _meetingsClocks[meeting.Topic] = vector;
@@ -460,6 +481,7 @@ namespace Server
 
         public void ReceiveJoin(string username, MeetingProposal proposal, MeetingRecord record, VectorClock newVector)
         {
+            while (_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
 
             Console.WriteLine("received join {0}", proposal.Topic);
@@ -523,6 +545,7 @@ namespace Server
 
         public void ReceiveClose(MeetingProposal proposal, VectorClock newVector)
         {
+            while (_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
 
             Console.WriteLine("received close {0}", proposal.Topic);
@@ -564,6 +587,7 @@ namespace Server
 
         public void ReceiveUpdateLocation(Location location)
         {
+            while (_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
 
             Console.WriteLine("received updated location {0}", location.Name);
@@ -646,24 +670,16 @@ namespace Server
             Console.WriteLine("Server is active. URL: {0}", SERVER_URL);
         }
 
-        public void ShutDown()
-        {
-
-        }
-
-        public void Crash()
-        {
-
-        }
-
         public void Freeze()
         {
-
+            Console.WriteLine("FREEZE");
+            _isFrozen = true;
         }
 
         public void Unfreeze()
         {
-
+            Console.WriteLine("UNFREEZE");
+            _isFrozen = false;
         }
 
 
