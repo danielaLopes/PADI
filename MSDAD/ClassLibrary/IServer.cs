@@ -10,8 +10,6 @@ namespace ClassLibrary
     public interface IServer : ISystemNode
     {
         // methods to be used by PuppetMaster to simulate faults and delays
-        void Crash();
-
         void Freeze();
 
         void Unfreeze();

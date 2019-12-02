@@ -628,16 +628,6 @@ namespace Server
             Console.WriteLine("Server is active. URL: {0}", SERVER_URL);
         }
 
-        public void ShutDown()
-        {
-
-        }
-
-        public void Crash()
-        {
-
-        }
-
         public void Freeze()
         {
 

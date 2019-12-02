@@ -183,7 +183,7 @@ namespace Client
             Console.WriteLine("new client {0}", name);
             IClient client = (IClient)Activator.GetObject(typeof(IClient), clientUrl);
             _clients.TryAdd(name, client);
-            if (_clients[name] != null)
+            /*if (_clients[name] != null)
             {
                 Console.WriteLine("client {0} correctly added", name);
             }
@@ -191,7 +191,7 @@ namespace Client
             {
                 Console.WriteLine("client {0} incorrectly added", name);
                 Thread.Sleep(2000);
-            }
+            }*/
             return client;
         }
 
@@ -200,16 +200,9 @@ namespace Client
             Console.WriteLine("Client is active. URL: {0}", CLIENT_URL);
         }
 
-        public void ShutDown()
-        {
-
-        }
-
         public void SendInvitations(List<string> invitees, MeetingProposal proposal)
         {
             // assumes every client knows every other client
-
-            //int minSpreaders = 1;
             int threshold = 2;
 
             // easy case: there are few invitees so we can 
@@ -221,7 +214,7 @@ namespace Client
                     if (!invitee.Equals(USERNAME))
                         // no need to send inviteesLeft because the invitation
                         // is not going to need to be propapagated anymore
-                        _clients[invitee].ReceiveInvitation(proposal);
+                        _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls);
                 }
             }
             // case with lots of invitees: send first directly and then
@@ -233,42 +226,45 @@ namespace Client
                 {
                     if (!invitee.Equals(USERNAME))
                     {
-                        Console.WriteLine("{0} added to inviteesLeft", invitee);
+                        //Console.WriteLine("{0} added to inviteesLeft", invitee);
                         inviteesLeft.Add(invitee);
                     }
                 }
                 foreach (string invitee in invitees.GetRange(0, threshold))
                 {
-                    Console.WriteLine("invitee {0},", invitee);
+                    //Console.WriteLine("invitee {0},", invitee);
 
                     if (!invitee.Equals(USERNAME))
                     {
-                        _clients[invitee].ReceiveInvitation(proposal, inviteesLeft);
+                        _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls, inviteesLeft);
                     }       
                 }
             }
         }
 
-        public void ReceiveInvitation(MeetingProposal proposal, List<string> inviteesLeft = null)
+        public void ReceiveInvitation(MeetingProposal proposal, List<string> allClientUrls, List<string> inviteesLeft = null)
         {
             if (_knownClientUrls.Count == 0)
             {
-                _knownClientUrls = _remoteServer.AskForUpdateClients();
+                // by directly receiving a list of all the existing clients know by the
+                // previous client, it prevents the current client from having to
+                // communicate with his server
+                _knownClientUrls = allClientUrls;
                 UpdateClients(_knownClientUrls);
             } 
 
             if (inviteesLeft != null)
             {
-                foreach (string invitee in inviteesLeft)
+                /*foreach (string invitee in inviteesLeft)
                 {
                     Console.WriteLine("invitee in inviteesLeft {0}", invitee);
-                }
+                }*/
                 SendInvitations(inviteesLeft, proposal);
             }
-            else
+            /*else
             {
                 Console.WriteLine("inviteesLeft is null");
-            }
+            }*/
             _knownMeetingProposals.Add(proposal.Topic, proposal);
             Console.WriteLine("Received proposal with topic: {0}", proposal.Topic);
         }

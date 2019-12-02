@@ -14,6 +14,6 @@ namespace ClassLibrary
         void UpdateClients(List<string> urls);
 
         // methods to be used by other clients
-        void ReceiveInvitation(MeetingProposal proposal, List<string> inviteesLeft = null);
+        void ReceiveInvitation(MeetingProposal proposal, List<string> allClientUrls, List<string> inviteesLeft = null);
     }
 }
