@@ -5,6 +5,7 @@ using System.IO;
 using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
+using System.Collections.Concurrent;
 
 namespace PCS
 {
@@ -12,7 +13,10 @@ namespace PCS
     {
         private const int PCS_PORT = 10000;
         private const string PCS_NAME = "pcs";
-        private List<String> _processes;
+        /// <summary>
+        /// key->processId value->processId
+        /// </summary>
+        private ConcurrentDictionary<string, int> _processes;
 
         public ProcessCreationService()
         {
@@ -21,29 +25,24 @@ namespace PCS
             ChannelServices.RegisterChannel(channel, false);
             // create the PCS's remote object
             RemotingServices.Marshal(this, PCS_NAME, typeof(ProcessCreationService));
-            _processes = new List<String>();
+            _processes = new ConcurrentDictionary<string, int>();
         }
 
-        public void Start(string path, string fields)
+        public void Start(string path, string fields, string id)
         {
             Process newProcess = Process.Start(@path, fields);
-            _processes.Add(newProcess.ProcessName);
+            _processes.TryAdd(id, newProcess.Id);
         }
 
         public void ShutDownAll()
         {
-            foreach(String process in _processes)
+            foreach(int processId in _processes.Values)
             {
-                Process[] p = Process.GetProcessesByName(process);
-                if(p.Length != 0)
-                    foreach(Process proc in p)
-                    {
-                        proc.CloseMainWindow();
-                        proc.Close();
-                    }
-                
+                Process process = Process.GetProcessById(processId);
+                process.CloseMainWindow();
+                process.Close();
+              
             }
-
             Console.WriteLine("closed all processes");
         }
 
@@ -57,6 +56,14 @@ namespace PCS
                     file.WriteLine(line);
                 }
             }
+        }
+
+        public void Crash(string serverId)
+        {
+            Console.WriteLine("Crashing server {0}", serverId);
+            Process process = Process.GetProcessById(_processes[serverId]);
+            process.CloseMainWindow();
+            process.Close();
         }
 
         static void Main(string[] args)

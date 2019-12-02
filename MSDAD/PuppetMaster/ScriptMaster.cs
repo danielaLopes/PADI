@@ -24,7 +24,8 @@ namespace PuppetMaster
         public void ReceiveCommand(string command)
         {
             List<string> fields = command.Split().ToList();
-            string strFields = command.Remove(0, fields[0].Length);
+            string strFieldsUntrimed = command.Remove(0, fields[0].Length);
+            string strFields = strFieldsUntrimed.Trim();
 
             if (fields[0].Equals("AddRoom"))
             {
