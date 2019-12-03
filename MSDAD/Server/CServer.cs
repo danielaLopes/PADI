@@ -61,6 +61,13 @@ namespace Server
         private ConcurrentDictionary<String, VectorClock> _meetingsClocks = new ConcurrentDictionary<String, VectorClock>();
 
         /// <summary>
+        /// Simulates the operations log
+        /// key: String corresponding to meeting topic
+        /// Value: List of Operations
+        /// </summary>
+        private ConcurrentDictionary<String, List<Operation>> _operationsLog = new ConcurrentDictionary<string, List<Operation>>();
+
+        /// <summary>
         /// Max number of faults tolerated by the system ?????
         /// </summary>
         private int _maxFaults;
@@ -180,6 +187,9 @@ namespace Server
                 _meetingsClocks[proposal.Topic] = new VectorClock(SERVER_URL, _servers.Keys);
                 _meetingsClocks[proposal.Topic].printVectorClock(proposal.Topic);
 
+                // we create a new operations log for the new meeting
+                _operationsLog[proposal.Topic] = new List<Operation>();
+
                 Console.WriteLine("Created new meeting proposal for " + proposal.Topic + ".");
 
                 BroadcastNewMeeting(proposal);
@@ -232,6 +242,9 @@ namespace Server
                         // we update the respective vector clock
                         incrementVectorClock(topic);
 
+                        // we update the respective log
+                        updateLog(topic, record);
+
                         BroadcastJoin(username, proposal, record);
                     }
                 }
@@ -251,6 +264,9 @@ namespace Server
 
                     // we update the respective vector clock
                     incrementVectorClock(topic);
+
+                    // we update the respective log
+                    updateLog(topic, record);
 
                     BroadcastJoin(username, proposal, record);
                 }
@@ -343,6 +359,10 @@ namespace Server
 
             // we update the respective vector clock
             incrementVectorClock(topic);
+
+            // we update the respective log
+            updateLog(topic);
+
             BroadcastClose(proposal);
         }
 
@@ -660,6 +680,21 @@ namespace Server
             Console.WriteLine("AFTER UPDATE ALL TIME CLOCKS:");
             foreach (KeyValuePair<String, VectorClock> pair in _meetingsClocks)
                 pair.Value.printVectorClock(pair.Key);
+        }
+
+        public void updateLog(String meetingTopic, MeetingRecord record = null)
+        {
+            
+            if (record == null)
+            {
+                // we register a new close operation
+                _operationsLog[meetingTopic].Add(new CloseOperation(_meetingsClocks[meetingTopic]));
+            }
+            else
+            {
+                // we register a new join operation
+                _operationsLog[meetingTopic].Add(new JoinOperation(_meetingsClocks[meetingTopic], record));
+            }
         }
 
 
