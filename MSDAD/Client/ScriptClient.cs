@@ -59,27 +59,38 @@ namespace Client
         ///     args[1]->clientUrl
         ///     args[2]->serverUrl
         ///     args[3]->scriptFile
-        ///     args[4]->backupServer
+        ///     args[4]->nBackupServers
+        ///     args[5:5+args[4]]->backupServer
         ///     (optional)
-        ///     args[5:]->otherClientsUrls
+        ///     args[5+args[4]:]->otherClientsUrls
         /// </param>
         static void Main(string[] args)
         {
             CClient client;
 
-            if (args.Length > 5)
+            List<string> backupServers = new List<string>();
+            int nBackupServers = Int32.Parse(args[4]);
+            int i = 0;
+            for (i = 5; i < 5 + nBackupServers; i++)
             {
-                int nClients = Int32.Parse(args[5]);
+                backupServers.Add(args[i]);
+            }
+
+            Console.WriteLine("args[5 + nBackupServers] {0}", args[5 + nBackupServers - 1]);
+
+            if (args.Length > 5 + nBackupServers)
+            {
+                int nClients = Int32.Parse(args[5 + nBackupServers + 1]);
                 List<string> otherClientsUrl = new List<string>();
-                for (int i = 6; i < 6 + nClients; i++)
+                for (; i < 5 + nBackupServers + nClients; i++)
                 {
                     otherClientsUrl.Add(args[i]);
                 }
-                client = new CClient(args[0], args[1], args[2], args[4], otherClientsUrl);
+                client = new CClient(args[0], args[1], args[2], backupServers, otherClientsUrl);
             }
             else
             {
-                client = new CClient(args[0], args[1], args[2], args[4]);
+                client = new CClient(args[0], args[1], args[2], backupServers);
             }
             
             string scriptPath = args[3];

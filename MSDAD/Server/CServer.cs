@@ -26,9 +26,6 @@ namespace Server
 
         private ConcurrentDictionary<string, MeetingProposal> _currentMeetingProposals = new ConcurrentDictionary<string, MeetingProposal>();
 
-        // TODO THIS IS JUST TEMPORARY UNTIL PEER TO PEER CLIENT COMMUNICATION
-        private ConcurrentDictionary<string, IClient> _broadcastClients = new ConcurrentDictionary<string, IClient>();
-
         /// <summary>
         /// string->locationaName Locations->contains Rooms
         /// </summary> 
@@ -216,7 +213,7 @@ namespace Server
             if (!_currentMeetingProposals.TryGetValue(topic, out proposal))
             {
                 // if the server does not have a meeting, he tells the client to switch to a different server
-                AttributeNewServer(username);
+                _clients[username].SwitchServer();
             }
             else
             {
@@ -744,18 +741,6 @@ namespace Server
             return server;
         }
 
-
-        // ------------------- METHODS TO SUPPORT SERVER FAILURES -------------------
-
-        public void AttributeNewServer(string username)
-        {
-            // TODO change method of server selection, for example server with least clients
-            Random randomizer = new Random();
-            int random = randomizer.Next(_servers.Count);
-
-            List<string> urls = _servers.Keys.ToList();
-            _clients[username].SwitchServer(urls[random]);
-        }
 
         /// <summary>
         /// 

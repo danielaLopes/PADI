@@ -25,7 +25,11 @@ namespace Client
         // obtain server remote object
         private IServer _remoteServer;
 
-        private string _backupServerUrl;
+        /// <summary>
+        /// keeps track of the dead servers (true if dead, false if alive 
+        /// key -> serverUrl, value -> boolean to say if server is dead
+        /// </summary>
+        private Dictionary<string, bool> _serverStatus;
 
         /// <summary>
         /// Creates TCP channel, saves relevant information for remoting, registers itself as
@@ -34,7 +38,7 @@ namespace Client
         /// <param name="username"></param>
         /// <param name="clientUrl"></param>
         /// <param name="serverUrl"></param>
-        public CClient(string username, string clientUrl, string serverUrl, string backupServer, List<string> clientsUrls = null)
+        public CClient(string username, string clientUrl, string serverUrl, List<string> backupServers, List<string> clientsUrls = null)
         {
             USERNAME = username;
             CLIENT_URL = clientUrl;
@@ -47,11 +51,16 @@ namespace Client
             Console.WriteLine("Client registered with username {0} with url {1}.", username, clientUrl);
 
             RegisterNewServer(serverUrl);
-            Console.WriteLine("Backup server assigned {0}", backupServer);
-            _backupServerUrl = backupServer;
+
+            _serverStatus = new Dictionary<string, bool>();
+            foreach (string backup in backupServers)
+            {
+                _serverStatus.Add(backup, false);
+                Console.WriteLine("Backup server assigned {0}", backup);
+            }     
 
             _clients = new ConcurrentDictionary<string, IClient>();
-            _knownClientUrls = new List<string>();
+            _knownClientUrls = new List<string>();           
 
             _knownMeetingProposals = new Dictionary<string, MeetingProposal>();
 
@@ -66,8 +75,8 @@ namespace Client
         {
             // retrieve server's proxy
             _remoteServer = (IServer)Activator.GetObject(typeof(IServer), serverUrl);
-            // register new user in remote server
-            _remoteServer.RegisterUser(USERNAME, CLIENT_URL);
+            // register new user in remote server and retrieves a list of all the clients
+
             Console.WriteLine("Registered with server {0}", serverUrl);
         }
 
@@ -83,11 +92,15 @@ namespace Client
 
         public void Create(string meetingTopic, string minAttendees, List<string> slots, List<string> invitees = null)
         {
-            if (_knownClientUrls.Count == 0)
+            try
             {
                 _knownClientUrls = _remoteServer.AskForUpdateClients();
                 UpdateClients(_knownClientUrls);
-            } 
+            }
+            catch (Exception e)
+            {
+                SwitchServer();
+            }
 
             List<DateLocation> parsedSlots = ParseSlots(slots);
             List<string> parsedInvitees = invitees;
@@ -105,7 +118,14 @@ namespace Client
                 Participants = new List<string>(),
                 MeetingStatus = MeetingStatus.OPEN
             };
-            _remoteServer.Create(proposal);
+            try
+            {
+                _remoteServer.Create(proposal);
+            }
+            catch (Exception e)
+            {
+                SwitchServer();
+            }            
 
             _knownMeetingProposals.Add(proposal.Topic, proposal);
 
@@ -164,9 +184,26 @@ namespace Client
             _knownMeetingProposals = proposals;
         }
 
-        public void SwitchServer(string serverUrl)
+        /// <summary>
+        /// In case the server attributed to a client is slow,
+        /// not updated or dead, the client gets initialized with
+        /// a list of f server urls and chooses one of those
+        /// those urls to contact a new server, by order of the
+        /// urls received. This garantees the client is always going to
+        /// know the url of a server to contact, even in case of f failures
+        /// </summary>
+        public void SwitchServer()
         {
-            RegisterNewServer(serverUrl);
+            List<string> aliveUrls = new List<string>();
+            foreach (KeyValuePair<string, bool> url in _serverStatus)
+            {
+                if (url.Value == false) aliveUrls.Add(url.Key);
+            }
+
+            Random randomizer = new Random();
+            int random = randomizer.Next(aliveUrls.Count);
+
+            RegisterNewServer(aliveUrls[random]);
         }
 
         /// <summary>
@@ -219,12 +256,11 @@ namespace Client
             // send the invitations directly
             if (invitees.Count <= threshold)
             {
-                Console.WriteLine("invitees.Count <= threshold");
                 foreach (string invitee in invitees)
                 {   
                     // no need to send inviteesLeft because the invitation
                     // is not going to need to be propapagated anymore
-                    _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls);
+                    _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls.Count);
                 }
             }
             // case with lots of invitees: send first directly and then
@@ -236,62 +272,47 @@ namespace Client
 
                 // calculates how many clients must each client spread forward
                 int nInviteesForEach = (inviteesLeft.Count) / threshold;
-                Console.WriteLine("nInviteesForEach: {0}", nInviteesForEach);
-
                 int remainder = inviteesLeft.Count % threshold;
-                Console.WriteLine("remainder: {0}", remainder);
 
                 int i = 0;
                 foreach (string invitee in invitees.GetRange(0, threshold))
                 {
                     if (i == 0)
                     {
-                        Console.WriteLine("FIRST CASE");
-                        _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls,
+                        _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls.Count,
                             inviteesLeft.GetRange(0, nInviteesForEach + remainder));
-                        foreach (string name in inviteesLeft.GetRange(0, nInviteesForEach + remainder))
+                        /*foreach (string name in inviteesLeft.GetRange(0, nInviteesForEach + remainder))
                         {
                             Console.WriteLine("first case {0}", name);
-                        }                   
+                        } */                  
                     }
                     else
                     {
-                        Console.WriteLine("SECOND CASE");
-                        _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls,
+                        _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls.Count,
                                 inviteesLeft.GetRange(nInviteesForEach * i + remainder, nInviteesForEach));
-                        foreach (string name in inviteesLeft.GetRange(nInviteesForEach * i + remainder, nInviteesForEach))
+                        /*foreach (string name in inviteesLeft.GetRange(nInviteesForEach * i + remainder, nInviteesForEach))
                         {
                             Console.WriteLine("second case {0}", name);
-                        }
+                        }*/
                     } 
                     i++;
                 }
             }
         }
 
-        public void ReceiveInvitation(MeetingProposal proposal, List<string> allClientUrls, List<string> inviteesLeft = null)
+        public void ReceiveInvitation(MeetingProposal proposal, int nClients, List<string> inviteesLeft = null)
         {
-            if (_knownClientUrls.Count == 0)
+            // updates clients known if it's client count is not right
+            if (_knownClientUrls.Count != nClients)
             {
-                // by directly receiving a list of all the existing clients know by the
-                // previous client, it prevents the current client from having to
-                // communicate with his server
-                _knownClientUrls = allClientUrls;
+                _knownClientUrls = _remoteServer.AskForUpdateClients();
                 UpdateClients(_knownClientUrls);
-            } 
+            }
 
             if (inviteesLeft != null)
             {
-                /*foreach (string invitee in inviteesLeft)
-                {
-                    Console.WriteLine("invitee in inviteesLeft {0}", invitee);
-                }*/
                 SendInvitations(inviteesLeft, proposal);
             }
-            /*else
-            {
-                Console.WriteLine("inviteesLeft is null");
-            }*/
             _knownMeetingProposals.Add(proposal.Topic, proposal);
             Console.WriteLine("Received proposal with topic: {0}", proposal.Topic);
         }

@@ -38,6 +38,7 @@ namespace PuppetMaster
         /// key->serverId value->serverUrl
         /// </summary>
         public ConcurrentDictionary<string, string> ServerIdsToUrls { get; set; }
+        public int MaxFaults;
 
         public ConcurrentDictionary<string, IClient> Clients { get; set; }
 
@@ -94,9 +95,10 @@ namespace PuppetMaster
             _nodesCreated = 0;
         }
 
-        public IAsyncResult Server(string fields, string serverId, string url)
+        public IAsyncResult Server(string fields, string serverId, string url, int maxFaults)
         {
             _nodesCreated++;
+            MaxFaults = maxFaults;
             return _serverDelegate.BeginInvoke(fields, serverId, url, null, null);
         }
 
@@ -171,7 +173,7 @@ namespace PuppetMaster
         public void ClientSync(string fields, string username, string url, string serverUrl)
         {
             IAsyncResult result = _startProcessDelegate.BeginInvoke(url,
-                    fields + " " + ChooseBackupServer(serverUrl), 
+                    fields + " " + MaxFaults + " " + ChooseBackupServers(serverUrl), 
                     @"..\..\..\Client\bin\Debug\Client.exe", username, null, null);
                
             Clients.TryAdd(username, (IClient)Activator.GetObject(typeof(IClient), url));
@@ -182,28 +184,42 @@ namespace PuppetMaster
         }
 
         /// <summary>
-        /// Chooses the next server in the system to attribute as backup
+        /// Chooses f servers in the system to attribute as backup
         /// server to a client, in case of client's server failing
         /// </summary>
         /// <param name="urlMainServer"></param>
-        /// <returns> the url of the choosen backup server </returns>
-        public string ChooseBackupServer(string urlMainServer)
+        /// <returns> a string with the urls of f backup servers </returns>
+        public string ChooseBackupServers(string urlMainServer)
         {
-            List<string> serverUrlList = new List<string>(ServerIdsToUrls.Keys);
-            if (serverUrlList[serverUrlList.Count - 1].Equals(urlMainServer))
-            {
-                return serverUrlList[0];
-            }
-            for (int i = 0; i < serverUrlList.Count - 1; i++)
-            {
-                if (serverUrlList[i].Equals(urlMainServer))
+            string backupUrls = "";
+            if (MaxFaults > 0) {
+                List<string> serverUrlList = new List<string>(ServerIdsToUrls.Values);
+
+                Random randomizer = new Random();
+                int randomStartIndex = randomizer.Next(serverUrlList.Count);
+
+                int nBackups = 0;
+                for (int i = randomStartIndex; i < serverUrlList.Count; i++)
                 {
-                    return serverUrlList[i + 1];
+                    if (!urlMainServer.Equals(serverUrlList[i]))
+                    {
+                        backupUrls += serverUrlList[i] + " ";
+                        nBackups++;
+                    }
+                    if (nBackups == MaxFaults) return backupUrls;
                 }
-            }
-            // in case there's no other server to be a backup, the server
-            // returned is the same as the main client's server
-            return urlMainServer;
+                for (int i = 0; i < randomStartIndex; i++)
+                {
+                    if (!urlMainServer.Equals(serverUrlList[i]))
+                    {
+                        backupUrls += serverUrlList[i] + " ";
+                        nBackups++;
+                        Console.WriteLine("backupUrls {0}", backupUrls);
+                    }
+                    if (nBackups == MaxFaults) return backupUrls;
+                }
+            }     
+            return backupUrls;
         }
 
         public void StartProcess(string url, string fields, string exePath, string id)
@@ -291,10 +307,9 @@ namespace PuppetMaster
         public void CrashSync(string fields)
         {
             // match right PCS
-            Console.WriteLine(fields);
-            string basePcsUrl = BaseUrlExtractor.Extract(ServerIdsToUrls["1"]);
+            string basePcsUrl = BaseUrlExtractor.Extract(ServerIdsToUrls[fields]);
             ProcessCreationService pcs = PCSs[basePcsUrl];
-            pcs.Crash("1");
+            pcs.Crash(fields);
         }
 
         // Freeze server id
