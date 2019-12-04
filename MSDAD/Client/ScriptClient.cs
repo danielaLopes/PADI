@@ -76,8 +76,6 @@ namespace Client
                 backupServers.Add(args[i]);
             }
 
-            Console.WriteLine("args[5 + nBackupServers] {0}", args[5 + nBackupServers - 1]);
-
             if (args.Length > 5 + nBackupServers)
             {
                 int nClients = Int32.Parse(args[5 + nBackupServers + 1]);

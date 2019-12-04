@@ -24,6 +24,8 @@ namespace Client
 
         // obtain server remote object
         private IServer _remoteServer;
+        // keeps track of the current server's url
+        private string _remoteServerUrl;
 
         /// <summary>
         /// keeps track of the dead servers (true if dead, false if alive 
@@ -73,16 +75,33 @@ namespace Client
 
         public void RegisterNewServer(string serverUrl)
         {
-            // retrieve server's proxy
-            _remoteServer = (IServer)Activator.GetObject(typeof(IServer), serverUrl);
-            // register new user in remote server and retrieves a list of all the clients
+            try
+            {
+                // retrieve server's proxy
+                _remoteServer = (IServer)Activator.GetObject(typeof(IServer), serverUrl);
+                _remoteServerUrl = serverUrl;
+            }
+            catch(Exception e)
+            {
+                SwitchServer();
+            }
 
             Console.WriteLine("Registered with server {0}", serverUrl);
         }
 
         public void List()
         {
-            _remoteServer.List(USERNAME, _knownMeetingProposals);
+            try
+            {
+                _remoteServer.List(USERNAME, _knownMeetingProposals);
+            }
+            catch(Exception e)
+            {
+                string previousUrl = _remoteServerUrl;
+                SwitchServer();
+                _remoteServer.List(USERNAME, _knownMeetingProposals, previousUrl);
+            }
+            
             foreach (KeyValuePair<string, MeetingProposal> meetingProposal in _knownMeetingProposals)
             {
                 MeetingProposal proposal = meetingProposal.Value;
@@ -99,7 +118,10 @@ namespace Client
             }
             catch (Exception e)
             {
+                string previousUrl = _remoteServerUrl;
                 SwitchServer();
+                _knownClientUrls = _remoteServer.AskForUpdateClients(previousUrl);
+                UpdateClients(_knownClientUrls);
             }
 
             List<DateLocation> parsedSlots = ParseSlots(slots);
@@ -124,7 +146,9 @@ namespace Client
             }
             catch (Exception e)
             {
+                string previousUrl = _remoteServerUrl;
                 SwitchServer();
+                _remoteServer.Create(proposal, previousUrl);
             }            
 
             _knownMeetingProposals.Add(proposal.Topic, proposal);
@@ -164,13 +188,31 @@ namespace Client
                     Name = USERNAME,
                     DateLocationSlots = parsedSlots,
                 };
-                _remoteServer.Join(USERNAME, meetingTopic, record);
+                try
+                {
+                    _remoteServer.Join(USERNAME, meetingTopic, record);
+                }
+                catch(Exception e)
+                {
+                    string previousUrl = _remoteServerUrl;
+                    SwitchServer(); 
+                    _remoteServer.Join(USERNAME, meetingTopic, record, previousUrl);
+                }
             }
         }
 
         public void Close(string meetingTopic)
         {
-            _remoteServer.Close(meetingTopic);
+            try
+            {
+                _remoteServer.Close(meetingTopic);
+            }
+            catch(Exception e)
+            {
+                string previousUrl = _remoteServerUrl;
+                SwitchServer();
+                _remoteServer.Close(meetingTopic, previousUrl);
+            }    
         }
 
         public void Wait(string milliseconds)
@@ -305,8 +347,15 @@ namespace Client
             // updates clients known if it's client count is not right
             if (_knownClientUrls.Count != nClients)
             {
-                _knownClientUrls = _remoteServer.AskForUpdateClients();
-                UpdateClients(_knownClientUrls);
+                try
+                {
+                    _knownClientUrls = _remoteServer.AskForUpdateClients();
+                    UpdateClients(_knownClientUrls);
+                }
+                catch(Exception e)
+                {
+                    SwitchServer();
+                }
             }
 
             if (inviteesLeft != null)

@@ -68,10 +68,6 @@ namespace Server
         private int _minDelay;
         private int _maxDelay;
 
-        // to send messages to clients asynchronously, otherwise the loop would deadlock
-        private SendAllInvitationsDelegate _sendAllInvitationsDelegate;
-        private InvitationDelegate _sendInvitationsDelegate;
-
         private BroadcastNewMeetingDelegate _broadcastNewMeetingDelegate;
         private BroadcastJoinDelegate _broadcastJoinDelegate;
         private BroadcastCloseDelegate _broadcastCloseDelegate;
@@ -139,7 +135,7 @@ namespace Server
 
         // ------------------- COMMANDS SENT BY CLIENTS -------------------
 
-        public void RegisterUser(string username, string clientUrl) 
+        public void RegisterUser(string username, string clientUrl, string urlFailed = null) 
         {
             while (_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
@@ -160,13 +156,13 @@ namespace Server
             BroadcastNewClient(clientUrl);
         }
 
-        public List<string> AskForUpdateClients()
+        public List<string> AskForUpdateClients(string urlFailed = null)
         {
             return _clientUrls;
 
         }
 
-        public void Create(MeetingProposal proposal)
+        public void Create(MeetingProposal proposal, string urlFailed = null)
         {
             while(_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
@@ -187,7 +183,7 @@ namespace Server
             }
         }
 
-        public void List(string name, Dictionary<string,MeetingProposal> knownProposals)
+        public void List(string name, Dictionary<string,MeetingProposal> knownProposals, string urlFailed = null)
         {
             while (_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
@@ -205,7 +201,7 @@ namespace Server
             _clients[name].UpdateList(proposals);
         }
 
-        public void Join(string username, string topic, MeetingRecord record)
+        public void Join(string username, string topic, MeetingRecord record, string urlFailed = null)
         {
             while (_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
@@ -256,7 +252,7 @@ namespace Server
             }
         }
 
-        public void Close(string topic)
+        public void Close(string topic, string urlFailed = null)
         {
             while (_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
