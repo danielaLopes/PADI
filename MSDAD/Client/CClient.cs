@@ -104,7 +104,6 @@ namespace Client
                 FullRecords = new List<MeetingRecord>(),
                 Participants = new List<string>(),
                 MeetingStatus = MeetingStatus.OPEN
-
             };
             _remoteServer.Create(proposal);
 
@@ -116,9 +115,22 @@ namespace Client
             }
             else
             {
-                SendInvitations(invitees, proposal);
+                // if coordinator is in the invitees, he takes it away because he does
+                // not need to receive an invitation
+                if (invitees.Contains(USERNAME)) {
+                    List<string> inviteesWithoutCoordinator = new List<string>();
+                    foreach (string invitee in invitees)
+                    {
+                        if (!invitee.Equals(USERNAME))
+                            inviteesWithoutCoordinator.Add(invitee);
+                    }
+                    SendInvitations(inviteesWithoutCoordinator, proposal);
+                }
+                else
+                {
+                    SendInvitations(invitees, proposal);
+                }   
             }
-
         }
 
         public void Join(string meetingTopic, List<string> slots)
@@ -167,7 +179,8 @@ namespace Client
             foreach (string url in clientsUrls)
             {
                 string name = url.Split('/')[3];
-                IClient client = RegisterClient(name, url);
+                if (!name.Equals(USERNAME))
+                    RegisterClient(name, url);
             }
         }
 
@@ -183,15 +196,7 @@ namespace Client
             Console.WriteLine("new client {0}", name);
             IClient client = (IClient)Activator.GetObject(typeof(IClient), clientUrl);
             _clients.TryAdd(name, client);
-            /*if (_clients[name] != null)
-            {
-                Console.WriteLine("client {0} correctly added", name);
-            }
-            else
-            {
-                Console.WriteLine("client {0} incorrectly added", name);
-                Thread.Sleep(2000);
-            }*/
+
             return client;
         }
 
@@ -205,39 +210,61 @@ namespace Client
             // assumes every client knows every other client
             int threshold = 2;
 
+            foreach (string invitee in invitees)
+            {
+                Console.WriteLine("invitee: {0}", invitee);
+            }          
+
             // easy case: there are few invitees so we can 
             // send the invitations directly
-            if (invitees.Count < threshold)
+            if (invitees.Count <= threshold)
             {
+                Console.WriteLine("invitees.Count <= threshold");
                 foreach (string invitee in invitees)
                 {   
-                    if (!invitee.Equals(USERNAME))
-                        // no need to send inviteesLeft because the invitation
-                        // is not going to need to be propapagated anymore
-                        _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls);
+                    // no need to send inviteesLeft because the invitation
+                    // is not going to need to be propapagated anymore
+                    _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls);
                 }
             }
             // case with lots of invitees: send first directly and then
             // those to deliver the rest of the messages
             else
             {
-                List<string> inviteesLeft = new List<string>();
-                foreach (string invitee in invitees.GetRange(threshold, invitees.Count-threshold))
-                {
-                    if (!invitee.Equals(USERNAME))
-                    {
-                        //Console.WriteLine("{0} added to inviteesLeft", invitee);
-                        inviteesLeft.Add(invitee);
-                    }
-                }
+                List<string> inviteesLeft = new List<string>(
+                        invitees.GetRange(threshold, invitees.Count - threshold));
+
+                // calculates how many clients must each client spread forward
+                int nInviteesForEach = (inviteesLeft.Count) / threshold;
+                Console.WriteLine("nInviteesForEach: {0}", nInviteesForEach);
+
+                int remainder = inviteesLeft.Count % threshold;
+                Console.WriteLine("remainder: {0}", remainder);
+
+                int i = 0;
                 foreach (string invitee in invitees.GetRange(0, threshold))
                 {
-                    //Console.WriteLine("invitee {0},", invitee);
-
-                    if (!invitee.Equals(USERNAME))
+                    if (i == 0)
                     {
-                        _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls, inviteesLeft);
-                    }       
+                        Console.WriteLine("FIRST CASE");
+                        _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls,
+                            inviteesLeft.GetRange(0, nInviteesForEach + remainder));
+                        foreach (string name in inviteesLeft.GetRange(0, nInviteesForEach + remainder))
+                        {
+                            Console.WriteLine("first case {0}", name);
+                        }                   
+                    }
+                    else
+                    {
+                        Console.WriteLine("SECOND CASE");
+                        _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls,
+                                inviteesLeft.GetRange(nInviteesForEach * i + remainder, nInviteesForEach));
+                        foreach (string name in inviteesLeft.GetRange(nInviteesForEach * i + remainder, nInviteesForEach))
+                        {
+                            Console.WriteLine("second case {0}", name);
+                        }
+                    } 
+                    i++;
                 }
             }
         }
