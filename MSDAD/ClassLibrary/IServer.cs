@@ -19,13 +19,13 @@ namespace ClassLibrary
 
         void RegisterUser(string username, string clientUrl);
 
-        void Create(MeetingProposal proposal);
+        void Create(MeetingProposal proposal, bool local = true);
 
         void List(string name, Dictionary<string,MeetingProposal> knownProposals);
 
-        void Join(string username, string topic, MeetingRecord record);
+        void Join(string username, string topic, MeetingRecord record, bool local = true);
         
-        void Close(string topic);
+        void Close(string topic, bool local = true);
 
         // methods to be used by other servers
 
@@ -40,5 +40,9 @@ namespace ClassLibrary
         void ReceiveUpdateLocation(Location location);
 
         IServer RegisterServer(string serverUrl);
+
+        // vector clocks related methods
+
+        List<Operation> retrieveOperations(string meetingTopic, int minClock, int maxClock);
     }
 }
