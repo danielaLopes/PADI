@@ -67,7 +67,7 @@ namespace ClassLibrary
 
         public override void executeOperation(IServer server, String topic)
         {
-            server.Join(_username, topic, _record, false);
+            server.Join(_username, topic, _record, local:false);
         }
 
         public override void printOperation()

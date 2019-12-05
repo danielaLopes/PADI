@@ -196,7 +196,7 @@ namespace Client
                 {
                     string previousUrl = _remoteServerUrl;
                     SwitchServer(); 
-                    _remoteServer.Join(USERNAME, meetingTopic, record, previousUrl);
+                    _remoteServer.Join(USERNAME, meetingTopic, record, urlFailed:previousUrl);
                 }
             }
         }
