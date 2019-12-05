@@ -19,11 +19,11 @@ namespace ClassLibrary
 
         void RegisterUser(string username, string clientUrl);
 
-        void Create(MeetingProposal proposal, bool local = true);
+        void Create(MeetingProposal proposal);
 
         void List(string name, Dictionary<string,MeetingProposal> knownProposals);
 
-        void Join(string username, string topic, MeetingRecord record, bool local = true);
+        void Join(string username, string topic, MeetingRecord record);
         
         void Close(string topic, bool local = true);
 

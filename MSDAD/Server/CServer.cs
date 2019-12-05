@@ -176,7 +176,7 @@ namespace Server
 
         }
 
-        public void Create(MeetingProposal proposal, bool local = true)
+        public void Create(MeetingProposal proposal)
         {
             while (_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
@@ -279,7 +279,7 @@ namespace Server
             }
         }
 
-        public void Close(string topic, bool local = true)
+        public void Close(string topic)
         {
             while (_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());

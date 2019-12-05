@@ -44,7 +44,7 @@ namespace ClassLibrary
 
         public override void executeOperation(IServer server, string topic = null)
         {
-            server.Create(_proposal, false);
+            server.Create(_proposal);
         }
 
         public override void printOperation()
