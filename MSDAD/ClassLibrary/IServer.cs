@@ -24,8 +24,8 @@ namespace ClassLibrary
         void List(string name, Dictionary<string,MeetingProposal> knownProposals, string urlFailed = null);
 
         void Join(string username, string topic, MeetingRecord record, string urlFailed = null);
-        
-        void Close(string topic, string urlFailed = null);
+     
+        void Close(string topic, string urlFailed = null, bool local = true);
 
         // methods to be used by other servers
 
@@ -40,5 +40,9 @@ namespace ClassLibrary
         void ReceiveUpdateLocation(Location location);
 
         IServer RegisterServer(string serverUrl);
+
+        // vector clocks related methods
+
+        List<Operation> retrieveOperations(string meetingTopic, int minClock, int maxClock);
     }
 }
