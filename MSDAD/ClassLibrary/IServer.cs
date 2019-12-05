@@ -15,17 +15,17 @@ namespace ClassLibrary
         void Unfreeze();
 
         // methods to be used by Clients
-        List<string> AskForUpdateClients();
+        List<string> AskForUpdateClients(string urlFailed = null);
 
-        void RegisterUser(string username, string clientUrl);
+        void RegisterUser(string username, string clientUrl, string urlFailed = null);
 
-        void Create(MeetingProposal proposal);
+        void Create(MeetingProposal proposal, string urlFailed = null);
 
-        void List(string name, Dictionary<string,MeetingProposal> knownProposals);
+        void List(string name, Dictionary<string,MeetingProposal> knownProposals, string urlFailed = null);
 
-        void Join(string username, string topic, MeetingRecord record);
-        
-        void Close(string topic, bool local = true);
+        void Join(string username, string topic, MeetingRecord record, string urlFailed = null);
+     
+        void Close(string topic, string urlFailed = null, bool local = true);
 
         // methods to be used by other servers
 

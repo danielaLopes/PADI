@@ -26,9 +26,6 @@ namespace Server
 
         private ConcurrentDictionary<string, MeetingProposal> _currentMeetingProposals = new ConcurrentDictionary<string, MeetingProposal>();
 
-        // TODO THIS IS JUST TEMPORARY UNTIL PEER TO PEER CLIENT COMMUNICATION
-        private ConcurrentDictionary<string, IClient> _broadcastClients = new ConcurrentDictionary<string, IClient>();
-
         /// <summary>
         /// string->locationaName Locations->contains Rooms
         /// </summary> 
@@ -77,10 +74,6 @@ namespace Server
         /// </summary>
         private int _minDelay;
         private int _maxDelay;
-
-        // to send messages to clients asynchronously, otherwise the loop would deadlock
-        private SendAllInvitationsDelegate _sendAllInvitationsDelegate;
-        private InvitationDelegate _sendInvitationsDelegate;
 
         private BroadcastNewMeetingDelegate _broadcastNewMeetingDelegate;
         private BroadcastJoinDelegate _broadcastJoinDelegate;
@@ -149,7 +142,8 @@ namespace Server
 
         // ------------------- COMMANDS SENT BY CLIENTS -------------------
 
-        public void RegisterUser(string username, string clientUrl)
+
+        public void RegisterUser(string username, string clientUrl, string urlFailed = null) 
         {
             while (_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
@@ -170,13 +164,13 @@ namespace Server
             BroadcastNewClient(clientUrl);
         }
 
-        public List<string> AskForUpdateClients()
+        public List<string> AskForUpdateClients(string urlFailed = null)
         {
             return _clientUrls;
 
         }
 
-        public void Create(MeetingProposal proposal)
+        public void Create(MeetingProposal proposal, string urlFailed = null)
         {
             while (_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
@@ -202,7 +196,8 @@ namespace Server
             }
         }
 
-        public void List(string name, Dictionary<string, MeetingProposal> knownProposals)
+
+        public void List(string name, Dictionary<string,MeetingProposal> knownProposals, string urlFailed = null)
         {
             while (_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
@@ -222,7 +217,8 @@ namespace Server
 
         }
 
-        public void Join(string username, string topic, MeetingRecord record, bool local = true)
+
+        public void Join(string username, string topic, MeetingRecord record, string urlFailed = null, bool local = true)
         {
             while (_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
@@ -230,7 +226,7 @@ namespace Server
             if (!_currentMeetingProposals.TryGetValue(topic, out proposal))
             {
                 // if the server does not have a meeting, he tells the client to switch to a different server
-                AttributeNewServer(username);
+                _clients[username].SwitchServer();
             }
             else
             {
@@ -279,7 +275,7 @@ namespace Server
             }
         }
 
-        public void Close(string topic)
+        public void Close(string topic, string urlFailed = null)
         {
             while (_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
@@ -834,18 +830,6 @@ namespace Server
             return server;
         }
 
-
-        // ------------------- METHODS TO SUPPORT SERVER FAILURES -------------------
-
-        public void AttributeNewServer(string username)
-        {
-            // TODO change method of server selection, for example server with least clients
-            Random randomizer = new Random();
-            int random = randomizer.Next(_servers.Count);
-
-            List<string> urls = _servers.Keys.ToList();
-            _clients[username].SwitchServer(urls[random]);
-        }
 
         /// <summary>
         /// 
