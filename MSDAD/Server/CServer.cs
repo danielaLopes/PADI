@@ -141,8 +141,7 @@ namespace Server
 
         // ------------------- COMMANDS SENT BY CLIENTS -------------------
 
-
-        public void RegisterUser(string username, string clientUrl, string urlFailed = null)
+        public void RegisterUser(string username, string clientUrl, bool serverFailed) 
         {
             Console.WriteLine("REGISTER USER");
             while (_isFrozen) { }
@@ -164,7 +163,7 @@ namespace Server
             {
                 Console.WriteLine("not possible to register user {0} with URL: {1}. Try again", username, clientUrl);
             }
-            BroadcastNewClient(clientUrl);
+            if (!serverFailed) BroadcastNewClient(clientUrl);
         }
 
         public List<string> AskForUpdateClients(string urlFailed = null)
@@ -424,9 +423,7 @@ namespace Server
 
 
         // ------------------- COMMUNICATION WITH OTHER SERVERS -------------------
-        // servers should send updates to other servers so that they maintain the state distributed
-
-
+        // servers should send updates to other servers so that they maintain the sta       public void BroadcastNewClient(string url)
         public void BroadcastNewClient(string url)
         {
             foreach (KeyValuePair<string, IServer> server in _servers)
