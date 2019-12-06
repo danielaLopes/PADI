@@ -47,15 +47,6 @@ namespace Client
             USERNAME = username;
             CLIENT_URL = clientUrl;
 
-            /*IDictionary properties = new System.Collections.Hashtable();
-            //properties["name"] = Ipc_Channel_Name;
-            properties["port"] = PortExtractor.Extract(CLIENT_URL);
-            properties["connectionTimeout"] = 5000;
-            BinaryClientFormatterSinkProvider clientProvider = new BinaryClientFormatterSinkProvider();
-            BinaryServerFormatterSinkProvider serverProvider = new BinaryServerFormatterSinkProvider();
-
-            // creates TCP channel
-            TcpChannel clientChannel = new TcpChannel(properties, clientProvider, serverProvider);*/
             // creates TCP channel
             TcpChannel clientChannel = new TcpChannel(PortExtractor.Extract(CLIENT_URL));
             ChannelServices.RegisterChannel(clientChannel, false);
@@ -102,6 +93,7 @@ namespace Client
         /// <param name="contactedServer"></param>
         public string DetectServerDeath(bool contactedServer)
         {
+            Console.WriteLine("contactedServer {0}", contactedServer);
             if (!contactedServer)
             {
                 string previousUrl = _remoteServerUrl;
@@ -116,14 +108,18 @@ namespace Client
             bool contactedServer = false;
             try
             {
-                Parallel.Invoke(() => Timeout());
-                // retrieve server's proxy
-                _remoteServer = (IServer)Activator.GetObject(typeof(IServer), serverUrl);
-                _remoteServerUrl = serverUrl;
-                // register new user in remote server
-                _remoteServer.RegisterUser(USERNAME, CLIENT_URL);
-                contactedServer = true;
-                Console.WriteLine("Registered with server {0}", serverUrl);
+                Parallel.Invoke(() => Timeout(), () =>
+                {
+                    // retrieve server's proxy
+                    _remoteServer = (IServer)Activator.GetObject(typeof(IServer), serverUrl);
+                    _remoteServerUrl = serverUrl;
+                    // register new user in remote server
+                    _remoteServer.RegisterUser(USERNAME, CLIENT_URL);
+                    Console.WriteLine("registereduser");
+                    contactedServer = true;
+                    Console.WriteLine("Registered with server {0}", serverUrl);
+                });
+                
             }
             catch(Exception e)
             {
@@ -140,9 +136,11 @@ namespace Client
             bool contactedServer = false;
             try
             {
-                Parallel.Invoke(() => Timeout());
-                _remoteServer.List(USERNAME, _knownMeetingProposals);
-                contactedServer = true;
+                Parallel.Invoke(() => Timeout(), () =>
+                {
+                    _remoteServer.List(USERNAME, _knownMeetingProposals);
+                    contactedServer = true;
+                });  
             }
             catch (Exception e)
             {
@@ -162,10 +160,13 @@ namespace Client
             bool contactedServer = false;
             try
             {
-                Parallel.Invoke(() => Timeout());
-                _knownClientUrls = _remoteServer.AskForUpdateClients();
-                contactedServer = true;
-                UpdateClients(_knownClientUrls);
+                Parallel.Invoke(() => Timeout(), () =>
+                {
+                    _knownClientUrls = _remoteServer.AskForUpdateClients();
+                    contactedServer = true;
+                    UpdateClients(_knownClientUrls);
+                });
+                
             }
             catch (Exception e)
             {
@@ -193,9 +194,11 @@ namespace Client
             contactedServer = false;
             try
             {
-                Parallel.Invoke(() => Timeout());
-                _remoteServer.Create(proposal);
-                contactedServer = true;
+                Parallel.Invoke(() => Timeout(), () =>
+                {
+                    _remoteServer.Create(proposal);
+                    contactedServer = true;
+                });  
             }
             catch (Exception e)
             {
@@ -243,9 +246,11 @@ namespace Client
                 bool contactedServer = false;
                 try
                 {
-                    Parallel.Invoke(() => Timeout());
-                    _remoteServer.Join(USERNAME, meetingTopic, record);
-                    contactedServer = true;
+                    Parallel.Invoke(() => Timeout(), () =>
+                    {
+                        _remoteServer.Join(USERNAME, meetingTopic, record);
+                        contactedServer = true;
+                    });  
                 }
                 catch(Exception e)
                 {
@@ -260,9 +265,11 @@ namespace Client
             bool contactedServer = false;
             try
             {
-                Parallel.Invoke(() => Timeout());
-                _remoteServer.Close(meetingTopic);
-                contactedServer = true;
+                Parallel.Invoke(() => Timeout(), () =>
+                {
+                    _remoteServer.Close(meetingTopic);
+                    contactedServer = true;
+                });  
             }
             catch(Exception e)
             {
@@ -343,6 +350,7 @@ namespace Client
         public void SendInvitations(List<string> invitees, MeetingProposal proposal)
         {
             // assumes every client knows every other client
+            //int threshold = Math.Log(_knownClientUrls.Count);
             int threshold = 2;
 
             foreach (string invitee in invitees)
@@ -406,10 +414,12 @@ namespace Client
                 bool contactedServer = false;
                 try
                 {
-                    Parallel.Invoke(() => Timeout());
-                    _knownClientUrls = _remoteServer.AskForUpdateClients();
-                    contactedServer = true;
-                    UpdateClients(_knownClientUrls);
+                    Parallel.Invoke(() => Timeout(), () =>
+                    {
+                        _knownClientUrls = _remoteServer.AskForUpdateClients();
+                        contactedServer = true;
+                        UpdateClients(_knownClientUrls);
+                    });       
                 }
                 catch(Exception e)
                 {
