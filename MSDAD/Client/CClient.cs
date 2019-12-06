@@ -399,44 +399,48 @@ namespace Client
             int threshold = (int)Math.Log(_knownClientUrls.Count, 2);
             if (threshold == 0) threshold = 1;
 
-            // easy case: there are few invitees so we can 
-            // send the invitations directly
-            if (invitees.Count <= threshold)
+            // so that client does not block if a client he's trying to contact is not active
+            Task task = Task.Run(() =>
             {
-                foreach (string invitee in invitees)
+                // easy case: there are few invitees so we can 
+                // send the invitations directly
+                if (invitees.Count <= threshold)
                 {
-                    // no need to send inviteesLeft because the invitation
-                    // is not going to need to be propapagated anymore
-                    _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls.Count);
+                    foreach (string invitee in invitees)
+                    {
+                        // no need to send inviteesLeft because the invitation
+                        // is not going to need to be propapagated anymore
+                        _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls.Count);
+                    }
                 }
-            }
-            // case with lots of invitees: send first directly and then
-            // those to deliver the rest of the messages
-            else
-            {
-                List<string> inviteesLeft = new List<string>(
-                        invitees.GetRange(threshold, invitees.Count - threshold));
-
-                // calculates how many clients must each client spread forward
-                int nInviteesForEach = (inviteesLeft.Count) / threshold;
-                int remainder = inviteesLeft.Count % threshold;
-
-                int i = 0;
-                foreach (string invitee in invitees.GetRange(0, threshold))
+                // case with lots of invitees: send first directly and then
+                // those to deliver the rest of the messages
+                else
                 {
-                    if (i == 0)
+                    List<string> inviteesLeft = new List<string>(
+                            invitees.GetRange(threshold, invitees.Count - threshold));
+
+                    // calculates how many clients must each client spread forward
+                    int nInviteesForEach = (inviteesLeft.Count) / threshold;
+                    int remainder = inviteesLeft.Count % threshold;
+
+                    int i = 0;
+                    foreach (string invitee in invitees.GetRange(0, threshold))
                     {
-                        _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls.Count,
-                            inviteesLeft.GetRange(0, nInviteesForEach + remainder));
+                        if (i == 0)
+                        {
+                            _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls.Count,
+                                inviteesLeft.GetRange(0, nInviteesForEach + remainder));
+                        }
+                        else
+                        {
+                            _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls.Count,
+                                    inviteesLeft.GetRange(nInviteesForEach * i + remainder, nInviteesForEach));
+                        }
+                        i++;
                     }
-                    else
-                    {
-                        _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls.Count,
-                                inviteesLeft.GetRange(nInviteesForEach * i + remainder, nInviteesForEach));
-                    }
-                    i++;
                 }
-            }
+            });
         }
 
         public void ReceiveInvitation(MeetingProposal proposal, int nClients, 
