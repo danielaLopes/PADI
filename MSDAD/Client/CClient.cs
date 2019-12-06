@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Remoting;
@@ -8,6 +7,7 @@ using System.Runtime.Remoting.Channels.Tcp;
 using System.Threading;
 using System.Collections.Concurrent;
 using ClassLibrary;
+using System.Threading.Tasks;
 
 namespace Client
 {
@@ -33,6 +33,8 @@ namespace Client
         /// </summary>
         private Dictionary<string, bool> _serverStatus;
 
+        private int TIMEOUT = 10000;
+
         /// <summary>
         /// Creates TCP channel, saves relevant information for remoting, registers itself as
         /// remote object and gets preferred server's remote object.
@@ -44,6 +46,7 @@ namespace Client
         {
             USERNAME = username;
             CLIENT_URL = clientUrl;
+
             // creates TCP channel
             TcpChannel clientChannel = new TcpChannel(PortExtractor.Extract(CLIENT_URL));
             ChannelServices.RegisterChannel(clientChannel, false);
@@ -58,7 +61,6 @@ namespace Client
             foreach (string backup in backupServers)
             {
                 _serverStatus.Add(backup, false);
-                Console.WriteLine("Backup server assigned {0}", backup);
             }
 
             _clients = new ConcurrentDictionary<string, IClient>();
@@ -77,35 +79,56 @@ namespace Client
         {
             try
             {
-                // retrieve server's proxy
-                _remoteServer = (IServer)Activator.GetObject(typeof(IServer), serverUrl);
-                _remoteServer.RegisterUser(USERNAME, CLIENT_URL, serverFailed);
-                _remoteServerUrl = serverUrl;
+                Task task = Task.Run(() => {
+                    // retrieve server's proxy
+                    _remoteServer = (IServer)Activator.GetObject(typeof(IServer), serverUrl);
+                    _remoteServer.RegisterUser(USERNAME, CLIENT_URL, serverFailed);
+                    _remoteServerUrl = serverUrl;
+                });
+                task.Wait(TimeSpan.FromMilliseconds(TIMEOUT));
+                if (task.IsCompleted == false)
+                {
+                    throw new TimeoutException("Timeout in registerNewServer");
+                }
             }
-            catch (System.Net.Sockets.SocketException e)
+            catch (AggregateException e)
             {
-                Console.WriteLine("hiiiii");
                 DetectDeadServer();
                 SwitchServer();
             }
-
+            catch (TimeoutException e)
+            {
+                DetectDeadServer();
+                SwitchServer();
+            }
             Console.WriteLine("Registered with server {0}", serverUrl);
         }
+
 
         public void List()
         {
             try
             {
-                Console.WriteLine("BEFORE LIST");
-                _remoteServer.List(USERNAME, _knownMeetingProposals);
-                Console.WriteLine("AFTER LIST");
+                Task task = Task.Factory.StartNew(() => {
+                    _remoteServer.List(USERNAME, _knownMeetingProposals);
+                });
+                task.Wait(TimeSpan.FromMilliseconds(TIMEOUT));
+                if (task.IsCompleted == false)
+                {
+                    throw new TimeoutException("Timeout in list");
+                }
             }
-            catch (Exception e)
+            catch(AggregateException e)
             {
                 DetectDeadServer();
                 SwitchServer();
-                Console.WriteLine("REPEAT LIST");
-                _remoteServer.List(USERNAME, _knownMeetingProposals);
+                List();
+            }
+            catch (TimeoutException e)
+            {
+                DetectDeadServer();
+                SwitchServer();
+                List();
             }
 
             foreach (KeyValuePair<string, MeetingProposal> meetingProposal in _knownMeetingProposals)
@@ -115,24 +138,68 @@ namespace Client
             }
         }
 
-        public void Create(string meetingTopic, string minAttendees, List<string> slots, List<string> invitees = null)
+        public void InitClients()
         {
-            try
-            {
+            Task task = Task.Run(() => {
                 _knownClientUrls = _remoteServer.AskForUpdateClients();
                 UpdateClients(_knownClientUrls);
+            });
+            try
+            {
+                task.Wait(TimeSpan.FromMilliseconds(TIMEOUT));
+                if (task.IsCompleted == false)
+                {
+                    throw new TimeoutException("Timeout in initClients");
+                }
             }
-            catch (Exception e)
+            catch (AggregateException e)
             {
                 DetectDeadServer();
                 SwitchServer();
-                _knownClientUrls = _remoteServer.AskForUpdateClients();
-                UpdateClients(_knownClientUrls);
+                InitClients();
             }
+            catch (TimeoutException e)
+            {
+                DetectDeadServer();
+                SwitchServer();
+                InitClients();
+            }
+        }
+
+        public void RemoteCreate(MeetingProposal proposal)
+        {
+            Task task = Task.Run(() => {
+                _remoteServer.Create(proposal);
+            });
+            try
+            {
+                task.Wait(TimeSpan.FromMilliseconds(TIMEOUT));
+                if (task.IsCompleted == false)
+                {
+                    throw new TimeoutException("Timeout in remoteCreate");
+                }
+            }
+            catch (AggregateException e)
+            {
+                DetectDeadServer();
+                SwitchServer();
+                RemoteCreate(proposal);
+            }
+            catch (TimeoutException e)
+            {
+                DetectDeadServer();
+                SwitchServer();
+                RemoteCreate(proposal);
+            }
+        }
+
+        public void Create(string meetingTopic, string minAttendees, List<string> slots, List<string> invitees = null)
+        {
+            InitClients();
 
             List<DateLocation> parsedSlots = ParseSlots(slots);
             List<string> parsedInvitees = invitees;
-
+            
             MeetingProposal proposal = new MeetingProposal
             {
                 Coordinator = USERNAME,
@@ -140,22 +207,14 @@ namespace Client
                 MinAttendees = Int32.Parse(minAttendees),
                 DateLocationSlots = parsedSlots,
                 Invitees = parsedInvitees,
-                Records = new SortedDictionary<string, MeetingRecord>(),
+                Records = new List<MeetingRecord>(),
                 FailedRecords = new List<MeetingRecord>(),
                 FullRecords = new List<MeetingRecord>(),
                 Participants = new List<string>(),
                 MeetingStatus = MeetingStatus.OPEN
             };
-            try
-            {
-                _remoteServer.Create(proposal);
-            }
-            catch (Exception e)
-            {
-                DetectDeadServer();
-                SwitchServer();
-                _remoteServer.Create(proposal);
-            }
+
+            RemoteCreate(proposal);
 
             _knownMeetingProposals.Add(proposal.Topic, proposal);
 
@@ -167,6 +226,7 @@ namespace Client
             {
                 // if coordinator is in the invitees, he takes it away because he does
                 // not need to receive an invitation
+
                 if (invitees.Contains(USERNAME))
                 {
                     List<string> inviteesWithoutCoordinator = new List<string>();
@@ -180,8 +240,36 @@ namespace Client
                 else
                 {
                     SendInvitations(invitees, proposal);
+                }  
+            }
+        }
+
+        public void RemoteJoin(string meetingTopic, MeetingRecord record)
+        {
+            try
+            {
+                Task task = Task.Run(() => {
+                    _remoteServer.Join(USERNAME, meetingTopic, record);
+                });
+                task.Wait(TimeSpan.FromMilliseconds(TIMEOUT));
+                if (task.IsCompleted == false)
+                {
+                    throw new TimeoutException("Timeout in remoteJoin");
                 }
             }
+            catch (AggregateException e)
+            {
+                DetectDeadServer();
+                SwitchServer();
+                RemoteJoin(meetingTopic, record);
+            }
+            catch (TimeoutException e)
+            {
+                DetectDeadServer();
+                SwitchServer();
+                RemoteJoin(meetingTopic, record);
+            }
+
         }
 
         public void Join(string meetingTopic, List<string> slots)
@@ -195,31 +283,40 @@ namespace Client
                     Name = USERNAME,
                     DateLocationSlots = parsedSlots,
                 };
-                //try
-                //{
-                    _remoteServer.Join(USERNAME, meetingTopic, record);
-                //}
-                /*catch (Exception e)
-                {
-                    Console.WriteLine(e.Message);
-                    SwitchServer();
-                    _remoteServer.Join(USERNAME, meetingTopic, record);
-                }*/
+
+                RemoteJoin(meetingTopic, record);
             }
         }
 
-        public void Close(string meetingTopic)
+        public void RemoteClose(string meetingTopic)
         {
             try
             {
-                _remoteServer.Close(meetingTopic);
+                Task task = Task.Run(() => {
+                    _remoteServer.Close(meetingTopic);
+                });
+                task.Wait(TimeSpan.FromMilliseconds(TIMEOUT));
+                if (task.IsCompleted == false)
+                {
+                    throw new TimeoutException("Timeout in remoteClose");
+                }
             }
-            catch (Exception e)
+            catch (AggregateException e)
             {
-                string previousUrl = _remoteServerUrl;
+                DetectDeadServer();
                 SwitchServer();
-                _remoteServer.Close(meetingTopic, previousUrl);
+                RemoteClose(meetingTopic);
             }
+            catch (TimeoutException e)
+            {
+                DetectDeadServer();
+                SwitchServer();
+                RemoteClose(meetingTopic);
+            }
+        }
+        public void Close(string meetingTopic)
+        {
+            RemoteClose(meetingTopic);
         }
 
         public void Wait(string milliseconds)
@@ -342,7 +439,8 @@ namespace Client
             }
         }
 
-        public void ReceiveInvitation(MeetingProposal proposal, int nClients, List<string> inviteesLeft = null)
+        public void ReceiveInvitation(MeetingProposal proposal, int nClients, 
+                List<string> inviteesLeft = null)
         {
             // updates clients known if it's client count is not right
             if (_knownClientUrls.Count != nClients)
@@ -356,6 +454,8 @@ namespace Client
                 {
                     DetectDeadServer();
                     SwitchServer();
+                    _knownClientUrls = _remoteServer.AskForUpdateClients();
+                    UpdateClients(_knownClientUrls);
                 }
             }
 
@@ -382,3 +482,4 @@ namespace Client
         }
     }
 }
+

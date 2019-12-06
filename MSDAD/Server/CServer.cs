@@ -14,11 +14,11 @@ namespace Server
     public delegate void SendAllInvitationsDelegate(MeetingProposal proposal);
     public delegate void InvitationDelegate(IClient user, MeetingProposal proposal, string userName);
 
-    public delegate string BroadcastNewMeetingDelegate(IServer server, string url, MeetingProposal proposal);
-    public delegate string BroadcastJoinDelegate(IServer server, string url, string username, MeetingProposal proposal, MeetingRecord record);
-    public delegate string BroadcastCloseDelegate(IServer server, string url, MeetingProposal proposal);
-    public delegate string BroadcastDeadServersDelegate(IServer server, string url, string deadServer);
-    public delegate string BroadcastUpdateLocationDelegate(IServer server, string url, Location location);
+    public delegate string BroadcastNewMeetingDelegate(AckController ackController, IServer server, string url, MeetingProposal proposal);
+    public delegate string BroadcastJoinDelegate(AckController ackController, IServer server, string url, string username, MeetingProposal proposal, MeetingRecord record);
+    public delegate string BroadcastCloseDelegate(AckController ackController, IServer server, string url, MeetingProposal proposal);
+    public delegate string BroadcastDeadServersDelegate(AckController ackController, IServer server, string url, string deadServer);
+    public delegate string BroadcastUpdateLocationDelegate(AckController ackController, IServer server, string url, Location location);
 
     public class CServer : MarshalByRefObject, IServer
     {
@@ -141,20 +141,23 @@ namespace Server
 
         // ------------------- COMMANDS SENT BY CLIENTS -------------------
 
-
-        public void RegisterUser(string username, string clientUrl, bool serverFailed, string urlFailed = null) 
+        public void RegisterUser(string username, string clientUrl, bool serverFailed) 
         {
+            Console.WriteLine("REGISTER USER");
             while (_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
 
             // obtain client remote object
             if (_clients.TryAdd(username, (IClient)Activator.GetObject(typeof(IClient), clientUrl)))
             {
+                Console.WriteLine("BEFORE LOCK");
                 lock (_clientUrls)
                 {
+                    Console.WriteLine("BEFORE ADD");
                     _clientUrls.Add(clientUrl);
+                    Console.WriteLine("New user {0} with url {0} registered.", username, clientUrl);
                 }
-                Console.WriteLine("New user {0} with url {0} registered.", username, clientUrl);
+                
             }
             else
             {
@@ -165,6 +168,10 @@ namespace Server
 
         public List<string> AskForUpdateClients(string urlFailed = null)
         {
+            Console.WriteLine("askforupdate");
+            foreach (string user in _clientUrls) {
+                Console.WriteLine("client url {0}", user );
+            }
             return _clientUrls;
 
         }
@@ -236,10 +243,11 @@ namespace Server
                 {
                     if (!proposal.FailedRecords.Contains(record))
                     {
+
                         proposal.AddFailedRecord(record);
 
                         // we update the respective vector clock
-                        if(local) incrementVectorClock(topic);
+                        if (local) incrementVectorClock(topic);
 
                         // we update the respective log
                         updateLog(topic, record, username);
@@ -259,6 +267,7 @@ namespace Server
                             }
                         }
                     }
+
                     proposal.AddMeetingRecord(record);
 
                     // we update the respective vector clock
@@ -316,23 +325,29 @@ namespace Server
 
                 proposal.FinalRoom = finalRoom;
                 proposal.FinalDateLocation = finalDateLocation;
-                foreach (KeyValuePair<string, MeetingRecord> record in proposal.Records)
-                {
 
-                    if (record.Value.DateLocationSlots.Contains(finalDateLocation))
+                // sort records by VectorClock
+                proposal.Records.Sort();
+
+                
+                foreach (MeetingRecord record in proposal.Records)
+                {
+                    Console.WriteLine(record.ToString());
+
+                    if (record.DateLocationSlots.Contains(finalDateLocation))
                     {
                         countInvitees++;
 
-                        Console.WriteLine("record " + record.Value);
+                        Console.WriteLine("record " + record);
 
                         //if there's more invitees than the room capacity they go to a special list
                         if (countInvitees > proposal.FinalRoom.Capacity)//maxCapacity)
                         {
-                            proposal.AddFullRecord(record.Value);
+                            proposal.AddFullRecord(record);
                         }
                         else
                         {
-                            proposal.Participants.Add(record.Value.Name);
+                            proposal.Participants.Add(record.Name);
                         }
                     }
                 }
@@ -350,13 +365,17 @@ namespace Server
 
         public Room getAvailableRoom(DateLocation finalDateLocation, MeetingProposal proposal)
         {
-            Console.WriteLine("datLocation" + finalDateLocation.LocationName);
+            
+            if (finalDateLocation.Invitees < proposal.MinAttendees) return null;
+
             Location location = _locations[finalDateLocation.LocationName];//the final location
             SortedDictionary<int, Room> possibleRooms = new SortedDictionary<int, Room>(); //rooms not booked
             int maxCapacity = 0;
             foreach (KeyValuePair<string, Room> room in location.Rooms)
             {
-                if (room.Value.RoomAvailability == Room.RoomStatus.NONBOOKED)
+               // if (room.Value.RoomAvailability == Room.RoomStatus.NONBOOKED)
+               //checks if the room is available for that day
+                if (!room.Value.BookedDays.Contains(finalDateLocation))
                 {
                     possibleRooms.Add(room.Value.Capacity, room.Value); 
 
@@ -385,11 +404,11 @@ namespace Server
                 }
             }
 
-            if (finalDateLocation.Invitees >= proposal.MinAttendees && possibleRooms.Count > 0)
+            if (possibleRooms.Count > 0)
             {
                 //changes the room availability to booked if it doesn't get cancelled
                 //_locations[finalDateLocation.LocationName].Rooms[finalRoom.Name].RoomAvailability = Room.RoomStatus.BOOKED;
-                _locations[finalDateLocation.LocationName].Rooms[finalRoom.Name].RoomAvailability = Room.RoomStatus.BOOKED;
+                _locations[finalDateLocation.LocationName].Rooms[finalRoom.Name].AddBookedDay(finalDateLocation);
                 BroadcastUpdateLocation(location);
                 return finalRoom;
                 
@@ -400,9 +419,7 @@ namespace Server
 
 
         // ------------------- COMMUNICATION WITH OTHER SERVERS -------------------
-        // servers should send updates to other servers so that they maintain the state distributed
-
-
+        // servers should send updates to other servers so that they maintain the sta       public void BroadcastNewClient(string url)
         public void BroadcastNewClient(string url)
         {
             foreach (KeyValuePair<string, IServer> server in _servers)
@@ -420,23 +437,24 @@ namespace Server
             }
         }
 
-        public void WaitForMaxFault(WaitHandle[] handles)
+        public void WaitForMaxFault(AckController ackController)
         {
-            int n_acks = 0;
+            //int n_acks = 0;
             while (true)
             {
-                if (n_acks >= _maxFaults) break;
-                Console.WriteLine(".");
-                int index = WaitHandle.WaitAny(handles);
-                n_acks++;
-                Console.WriteLine("index" + index);
+                if (ackController.N_acks >= _maxFaults) break;
+                //Console.WriteLine("acks " + ackController.N_acks);
+                //Console.WriteLine("maxFaults " + _maxFaults);
+                //int index = WaitHandle.WaitAny(ackController.Handles);
+                //n_acks++;
+                /*Console.WriteLine("index" + index);
 
-                var list_handle = new List<WaitHandle>(handles);
+                var list_handle = new List<WaitHandle>(ackController.Handles);
                 list_handle.RemoveAt(index);
-                handles = list_handle.ToArray();
+                ackController.Handles = list_handle.ToArray();*/
 
             }
-            Console.WriteLine("acks" + n_acks);
+            Console.WriteLine("acks" + ackController.N_acks);
 
         }
 
@@ -444,32 +462,30 @@ namespace Server
 
         public void BroadcastNewMeeting(MeetingProposal proposal)
         {
-            
-            WaitHandle[] handles = new WaitHandle[_servers.Count];
 
-            //List<IAsyncResult> res = new List<IAsyncResult>();
-            List<bool> res_bool = new List<bool>();
+            WaitHandle[] handles = new WaitHandle[_servers.Count];
+            AckController ackController = new AckController();
+
 
             int i = 0;
             foreach (KeyValuePair<string, IServer> server in _servers)
             {
                 if (_serversStatus[server.Key] == false)
                 {
-                    handles[i] = _broadcastNewMeetingDelegate.BeginInvoke(server.Value, server.Key, proposal, BroadcastNewMeetingCallback, server.Key).AsyncWaitHandle;
+                    handles[i] = _broadcastNewMeetingDelegate.BeginInvoke(ackController, server.Value, server.Key, proposal, BroadcastNewMeetingCallback, server.Key).AsyncWaitHandle;
                     i++;
-                    res_bool.Add(false);
                 }
             }
 
-            WaitForMaxFault(handles);
+            WaitForMaxFault(ackController);
             
         }
 
-        public string BroadcastNewMeetingToServer(IServer server, string url, MeetingProposal proposal)
+        public string BroadcastNewMeetingToServer(AckController ackController, IServer server, string url, MeetingProposal proposal)
         {
             Console.WriteLine("going to inform server of new meeting {0}", proposal.Topic);
             server.ReceiveNewMeeting(proposal, _meetingsClocks[proposal.Topic]);
-
+            ackController.N_acks++;
 
             return url;
         }
@@ -484,7 +500,11 @@ namespace Server
             catch (Exception ex)
             {
                 Console.WriteLine("Server {0} is dead", res.AsyncState);
-                _serversStatus[(string)res.AsyncState] = true;
+                if (_serversStatus[(string)res.AsyncState] != true)
+                {
+                    _maxFaults--;
+                    _serversStatus[(string)res.AsyncState] = true;
+                }
                 BroadcastDeadServers((string)res.AsyncState);
             }
         }
@@ -524,7 +544,7 @@ namespace Server
         public void BroadcastJoin(string username, MeetingProposal proposal, MeetingRecord record)
         {
             WaitHandle[] handles = new WaitHandle[_servers.Count];
-
+            AckController ackController = new AckController();
             List<bool> res_bool = new List<bool>();
 
             int i = 0;
@@ -533,19 +553,21 @@ namespace Server
 
                 if (_serversStatus[server.Key] == false)
                 {
-                    handles[i] = _broadcastJoinDelegate.BeginInvoke(server.Value, server.Key, username, proposal, record, BroadcastJoinCallback, server.Key).AsyncWaitHandle;
+                    handles[i] = _broadcastJoinDelegate.BeginInvoke(ackController, server.Value, server.Key, username, proposal, record, BroadcastJoinCallback, server.Key).AsyncWaitHandle;
                     i++;
                     res_bool.Add(false);
                 }
             }
 
-            WaitForMaxFault(handles);
+            WaitForMaxFault(ackController);
         }
 
-        public string BroadcastJoinToServer(IServer server, string url, string username, MeetingProposal proposal, MeetingRecord record)
+        public string BroadcastJoinToServer(AckController ackController, IServer server, string url, string username, MeetingProposal proposal, MeetingRecord record)
         {
             Console.WriteLine("going to send join {0}", proposal.Topic);
             server.ReceiveJoin(username, proposal, record, _meetingsClocks[proposal.Topic]);
+            ackController.N_acks++;
+
             return url;
         }
 
@@ -560,7 +582,11 @@ namespace Server
             catch (Exception ex)
             {
                 Console.WriteLine("Server {0} is dead", res.AsyncState);
-                _serversStatus[(string)res.AsyncState] = true;
+                if (_serversStatus[(string)res.AsyncState] != true)
+                {
+                    _maxFaults--;
+                    _serversStatus[(string)res.AsyncState] = true;
+                }
                 BroadcastDeadServers((string)res.AsyncState);
             }
         }
@@ -584,7 +610,7 @@ namespace Server
 
             if (_currentMeetingProposals.TryGetValue(proposal.Topic, out previousProposal))
             {
-                if (!previousProposal.Records.ContainsKey(record.Name)) //stop condition request already received
+                if (!previousProposal.Records.Contains(record)) //stop condition request already received
                 {
                     //_currentMeetingProposals[proposal.Topic] = proposal;
                     //BroadcastJoin(username, proposal, record);
@@ -603,7 +629,7 @@ namespace Server
         public void BroadcastClose(MeetingProposal proposal)
         {
             WaitHandle[] handles = new WaitHandle[_servers.Count];
-
+            AckController ackController = new AckController();
             List<bool> res_bool = new List<bool>();
 
             int i = 0;
@@ -611,21 +637,22 @@ namespace Server
             {
                 if (_serversStatus[server.Key] == false)
                 {
-                    handles[i] = _broadcastCloseDelegate.BeginInvoke(server.Value, server.Key, proposal, BroadcastCloseCallback, server.Key).AsyncWaitHandle;
+                    handles[i] = _broadcastCloseDelegate.BeginInvoke(ackController, server.Value, server.Key, proposal, BroadcastCloseCallback, server.Key).AsyncWaitHandle;
                     i++;
                     res_bool.Add(false);
                 }
             }
 
-            WaitForMaxFault(handles);
+            WaitForMaxFault(ackController);
         }
 
-        public string BroadcastCloseToServer(IServer server, string url, MeetingProposal proposal)
+        public string BroadcastCloseToServer(AckController ackController, IServer server, string url, MeetingProposal proposal)
         {
             Console.WriteLine("going to send close {0}", proposal.Topic);
             server.ReceiveClose(proposal, _meetingsClocks[proposal.Topic]);
             //Console.WriteLine("Finished sending close!");
-            Thread.Sleep(3000);
+            //Thread.Sleep(3000);
+            ackController.N_acks++;
             return url;
         }
 
@@ -639,7 +666,11 @@ namespace Server
             catch (Exception ex)
             {
                 Console.WriteLine("Server {0} is dead", res.AsyncState);
-                _serversStatus[(string)res.AsyncState] = true;
+                if (_serversStatus[(string)res.AsyncState] != true)
+                {
+                    _maxFaults--;
+                    _serversStatus[(string)res.AsyncState] = true;
+                }
                 BroadcastDeadServers((string)res.AsyncState);
             }
         }
@@ -658,7 +689,7 @@ namespace Server
 
             if (_currentMeetingProposals.TryGetValue(proposal.Topic, out previousProposal))
             {
-                if (previousProposal.MeetingStatus != MeetingStatus.CLOSED)
+                if (previousProposal.MeetingStatus == MeetingStatus.OPEN )
                 {
                     _currentMeetingProposals[proposal.Topic] = proposal;
                     BroadcastClose(proposal);
@@ -674,21 +705,22 @@ namespace Server
         {
 
             WaitHandle[] handles = new WaitHandle[_servers.Count];
-
+            AckController ackController = new AckController();
             int i = 0;
             foreach (KeyValuePair<string, IServer> server in _servers)
             {
-                handles[i] = _broadcastUpdateLocationDelegate.BeginInvoke(server.Value, server.Key, location, BroadcastUpdateLocationCallback, server.Key).AsyncWaitHandle;
+                handles[i] = _broadcastUpdateLocationDelegate.BeginInvoke(ackController, server.Value, server.Key, location, BroadcastUpdateLocationCallback, server.Key).AsyncWaitHandle;
                 i++;
             }
 
-            WaitForMaxFault(handles);
+            WaitForMaxFault(ackController);
         }
 
-        public string BroadcastUpdateLocationToServer(IServer server, string url, Location location)
+        public string BroadcastUpdateLocationToServer(AckController ackController, IServer server, string url, Location location)
         {
             Console.WriteLine("going to send updated location {0}", location.Name);
             server.ReceiveUpdateLocation(location);
+            ackController.N_acks++;
             return url;
         }
 
@@ -702,7 +734,11 @@ namespace Server
             catch (Exception ex)
             {
                 Console.WriteLine("Server {0} is dead", res.AsyncState);
-                _serversStatus[(string)res.AsyncState] = true;
+                if (_serversStatus[(string)res.AsyncState] != true)
+                {
+                    _maxFaults--;
+                    _serversStatus[(string)res.AsyncState] = true;
+                }
                 BroadcastDeadServers((string)res.AsyncState);
             }
         }
@@ -721,21 +757,27 @@ namespace Server
         //BROADCAST DEAD SERVERS
         public void BroadcastDeadServers(string deadServer)
         {
-            List<IAsyncResult> res = new List<IAsyncResult>();
-            List<bool> res_bool = new List<bool>();
+            WaitHandle[] handles = new WaitHandle[_servers.Count];
+            AckController ackController = new AckController();
+
+            int i = 0;
             foreach (KeyValuePair<string, IServer> server in _servers)
             {
                 if (_serversStatus[server.Key] == false)
                 {
-                    _broadcastDeadServersDelegate.BeginInvoke(server.Value, server.Key, deadServer, BroadcastDeadServersCallback, server.Key);
+                    handles[i] = _broadcastDeadServersDelegate.BeginInvoke(ackController, server.Value, server.Key, deadServer, BroadcastDeadServersCallback, server.Key).AsyncWaitHandle;
+                    i++;
                 }
             }
+
+            WaitForMaxFault(ackController);
         }
 
-        public string BroadcastDeadServersToServer(IServer server, string url, string deadServer)
+        public string BroadcastDeadServersToServer(AckController ackController, IServer server, string url, string deadServer)
         {
             Console.WriteLine("going to send dead server {0}", deadServer);
             server.ReceiveDeadServers(deadServer);
+            ackController.N_acks++;
             return url;
         }
 
@@ -749,7 +791,11 @@ namespace Server
             catch (Exception ex)
             {
                 Console.WriteLine("Server {0} is dead", res.AsyncState);
-                _serversStatus[(string)res.AsyncState] = true;
+                if (_serversStatus[(string)res.AsyncState] != true)
+                {
+                    _maxFaults--;
+                    _serversStatus[(string)res.AsyncState] = true;
+                }
                 BroadcastDeadServers((string)res.AsyncState);
             }
         }
@@ -760,7 +806,12 @@ namespace Server
             Thread.Sleep(RandomIncomingMessageDelay());
 
             Console.WriteLine("received dead server {0}",deadServer);
-            _serversStatus[deadServer] = true;
+            if (_serversStatus[deadServer] != true)
+            {
+                _serversStatus[deadServer] = true;
+                _maxFaults--;
+                BroadcastDeadServers(deadServer);
+            }
         }
 
         // ------------------- VECTOR CLOCK -------------------
@@ -794,7 +845,7 @@ namespace Server
                     else if (newVector._currentVectorClock[clock.Key] - clock.Value > 1)
                     {
                         //Console.WriteLine("RECEIVED CLOCK IS MORE THAN 1 STEP AHEAD");
-                        Thread.Sleep(3000);
+                        //Thread.Sleep(3000);
                         // TO DO
                         // REQUEST MISSING INFORMATION FROM THE SERVER THAT IS A FEW STEPS AHEAD, NOT FROM ALL SERVERS
                         getMissingInformation(clock.Key, proposal.Topic, clock.Value, newVector._currentVectorClock[clock.Key]);
@@ -841,8 +892,9 @@ namespace Server
             }
             else
             {
+                // meeting record will now have a VectorClock associated for posterior sorting
+                record._vector = copy;
                 // we register a new join operation
-               
                 _operationsLog[meetingTopic].Add(new JoinOperation(copy, record, username));
             }
 
@@ -978,8 +1030,7 @@ namespace Server
         /// </param>
         static void Main(string[] args)
         {
-
-
+            
             CServer server;
 
             if (args.Length > 6)

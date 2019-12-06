@@ -17,7 +17,7 @@ namespace ClassLibrary
         // methods to be used by Clients
         List<string> AskForUpdateClients(string urlFailed = null);
 
-        void RegisterUser(string username, string clientUrl, bool serverFailed, string urlFailed = null);
+        void RegisterUser(string username, string clientUrl, bool serverFailed);
 
         void Create(MeetingProposal proposal, string urlFailed = null);
 
@@ -25,7 +25,8 @@ namespace ClassLibrary
 
         void Join(string username, string topic, MeetingRecord record, string urlFailed = null, bool local = true);
      
-        void Close(string topic, string urlFailed = null/*, bool local = true*/);
+        void Close(string topic, string urlFailed = null);
+
 
         // methods to be used by other servers
 
