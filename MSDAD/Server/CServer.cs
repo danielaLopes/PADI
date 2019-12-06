@@ -477,18 +477,13 @@ namespace Server
 
         public void BroadcastNewMeeting(MeetingProposal proposal)
         {
-
-            WaitHandle[] handles = new WaitHandle[_servers.Count];
             AckController ackController = new AckController();
 
-
-            int i = 0;
             foreach (KeyValuePair<string, IServer> server in _servers)
             {
                 if (_serversStatus[server.Key] == false)
                 {
-                    handles[i] = _broadcastNewMeetingDelegate.BeginInvoke(ackController, server.Value, server.Key, proposal, BroadcastNewMeetingCallback, server.Key).AsyncWaitHandle;
-                    i++;
+                    _broadcastNewMeetingDelegate.BeginInvoke(ackController, server.Value, server.Key, proposal, BroadcastNewMeetingCallback, server.Key);
                 }
             }
 
@@ -553,19 +548,14 @@ namespace Server
 
         public void BroadcastJoin(string username, MeetingProposal proposal, MeetingRecord record)
         {
-            WaitHandle[] handles = new WaitHandle[_servers.Count];
             AckController ackController = new AckController();
-            List<bool> res_bool = new List<bool>();
 
-            int i = 0;
             foreach (KeyValuePair<string, IServer> server in _servers)
             {
 
                 if (_serversStatus[server.Key] == false)
                 {
-                    handles[i] = _broadcastJoinDelegate.BeginInvoke(ackController, server.Value, server.Key, username, proposal, record, BroadcastJoinCallback, server.Key).AsyncWaitHandle;
-                    i++;
-                    res_bool.Add(false);
+                    _broadcastJoinDelegate.BeginInvoke(ackController, server.Value, server.Key, username, proposal, record, BroadcastJoinCallback, server.Key);
                 }
             }
 
@@ -633,18 +623,13 @@ namespace Server
 
         public void BroadcastClose(MeetingProposal proposal)
         {
-            WaitHandle[] handles = new WaitHandle[_servers.Count];
             AckController ackController = new AckController();
-            List<bool> res_bool = new List<bool>();
 
-            int i = 0;
             foreach (KeyValuePair<string, IServer> server in _servers)
             {
                 if (_serversStatus[server.Key] == false)
                 {
-                    handles[i] = _broadcastCloseDelegate.BeginInvoke(ackController, server.Value, server.Key, proposal, BroadcastCloseCallback, server.Key).AsyncWaitHandle;
-                    i++;
-                    res_bool.Add(false);
+                    _broadcastCloseDelegate.BeginInvoke(ackController, server.Value, server.Key, proposal, BroadcastCloseCallback, server.Key);
                 }
             }
 
@@ -703,14 +688,11 @@ namespace Server
 
         public void BroadcastUpdateLocation(Location location)
         {
-
-            WaitHandle[] handles = new WaitHandle[_servers.Count];
             AckController ackController = new AckController();
-            int i = 0;
+
             foreach (KeyValuePair<string, IServer> server in _servers)
             {
-                handles[i] = _broadcastUpdateLocationDelegate.BeginInvoke(ackController, server.Value, server.Key, location, BroadcastUpdateLocationCallback, server.Key).AsyncWaitHandle;
-                i++;
+                _broadcastUpdateLocationDelegate.BeginInvoke(ackController, server.Value, server.Key, location, BroadcastUpdateLocationCallback, server.Key);
             }
 
             WaitForMaxFault(ackController);
@@ -752,16 +734,13 @@ namespace Server
         //BROADCAST DEAD SERVERS
         public void BroadcastDeadServers(string deadServer)
         {
-            WaitHandle[] handles = new WaitHandle[_servers.Count];
             AckController ackController = new AckController();
 
-            int i = 0;
             foreach (KeyValuePair<string, IServer> server in _servers)
             {
                 if (_serversStatus[server.Key] == false)
                 {
-                    handles[i] = _broadcastDeadServersDelegate.BeginInvoke(ackController, server.Value, server.Key, deadServer, BroadcastDeadServersCallback, server.Key).AsyncWaitHandle;
-                    i++;
+                    _broadcastDeadServersDelegate.BeginInvoke(ackController, server.Value, server.Key, deadServer, BroadcastDeadServersCallback, server.Key);
                 }
             }
 
