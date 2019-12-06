@@ -271,7 +271,7 @@ namespace Server
                     proposal.AddMeetingRecord(record);
 
                     // we update the respective vector clock
-                    incrementVectorClock(topic);
+                    if(local) incrementVectorClock(topic);
 
                     // we update the respective log
                     updateLog(topic, record, username);
@@ -614,7 +614,7 @@ namespace Server
                 {
                     //_currentMeetingProposals[proposal.Topic] = proposal;
                     //BroadcastJoin(username, proposal, record);
-                    Join(username, proposal.Topic, record);
+                    Join(username, proposal.Topic, record, local:false);
                 }
             }
             else
@@ -825,25 +825,26 @@ namespace Server
 
         public void updateVectorClock(MeetingProposal proposal, VectorClock newVector)
         {
-            //Console.WriteLine("UPDATE VECTOR CLOCK");
+            Console.WriteLine("UPDATE VECTOR CLOCK");
             // VECTOR CLOCK UPDATE
             VectorClock updatedMeetingVector; // after receiving the new operation, this will be the resulting vector clock
             if (_meetingsClocks.TryGetValue(proposal.Topic, out updatedMeetingVector))
             {
-                //Console.WriteLine("MEETING CLOCK DA MEETING {0} EXISTE.", proposal.Topic);
+                Console.WriteLine("MEETING CLOCK DA MEETING {0} EXISTE.", proposal.Topic);
                 // this server knows this meeting
                 foreach (KeyValuePair<String, int> clock in _meetingsClocks[proposal.Topic]._currentVectorClock)
                 {
-                    //Console.WriteLine("GONNA COMPARE CLOCK OF SERVER {0} ", clock.Key);
+                    Console.WriteLine("GONNA COMPARE CLOCK OF SERVER {0} ", clock.Key);
                     // if the received clock is only one step ahead we only need to do a simple update
                     if (newVector._currentVectorClock[clock.Key] - clock.Value == 1)
                     {
-                        //Console.WriteLine("RECEIVED CLOCK IS ONE STEP AHEAD");
+                        Console.WriteLine("RECEIVED CLOCK IS ONE STEP AHEAD");
                         updatedMeetingVector._currentVectorClock[clock.Key] = newVector._currentVectorClock[clock.Key];
                     }
                     // if the received clock is more than one step ahead we need to request the missing information
                     else if (newVector._currentVectorClock[clock.Key] - clock.Value > 1)
                     {
+
                         //Console.WriteLine("RECEIVED CLOCK IS MORE THAN 1 STEP AHEAD");
                         //Thread.Sleep(3000);
                         // TO DO
