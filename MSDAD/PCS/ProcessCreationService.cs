@@ -38,9 +38,17 @@ namespace PCS
         {
             foreach(int processId in _processes.Values)
             {
-                Process process = Process.GetProcessById(processId);
-                process.CloseMainWindow();
-                process.Close();
+                try
+                {
+                    Process process = Process.GetProcessById(processId);
+                    process.CloseMainWindow();
+                    process.Close();
+                }
+                catch(ArgumentException e)
+                {
+                    Console.WriteLine("Process with id: {0} not found.", processId);
+                }
+               
               
             }
             Console.WriteLine("closed all processes");
