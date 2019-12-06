@@ -290,9 +290,13 @@ namespace Server
 
             if (_serverLocation == null)
             {
-                var list = _servers.Keys.ToList();
-                list.Sort();
-                _serverLocation = list[0];
+                List<string> aliveUrls = new List<string>();
+                foreach (KeyValuePair<string, bool> url in _serversStatus)
+                {
+                    if (url.Value == false) aliveUrls.Add(url.Key);
+                }
+                aliveUrls.Sort();
+                _serverLocation = aliveUrls[0];
                 Console.WriteLine("server location" + _serverLocation);
             }
 
@@ -461,6 +465,17 @@ namespace Server
 
         }
 
+        public void DetectFaults(string res)
+        {
+            Console.WriteLine("Server {0} is dead", res);
+            if (_serversStatus[res] != true)
+            {
+                _maxFaults--;
+                _serversStatus[res] = true;
+            }
+            if (_serverLocation == res) _serverLocation = null;
+        }
+
         //BROADCAST NEW MEETING
 
         public void BroadcastNewMeeting(MeetingProposal proposal)
@@ -502,12 +517,7 @@ namespace Server
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Server {0} is dead", res.AsyncState);
-                if (_serversStatus[(string)res.AsyncState] != true)
-                {
-                    _maxFaults--;
-                    _serversStatus[(string)res.AsyncState] = true;
-                }
+                DetectFaults((string)res.AsyncState);
                 BroadcastDeadServers((string)res.AsyncState);
             }
         }
@@ -584,12 +594,7 @@ namespace Server
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Server {0} is dead", res.AsyncState);
-                if (_serversStatus[(string)res.AsyncState] != true)
-                {
-                    _maxFaults--;
-                    _serversStatus[(string)res.AsyncState] = true;
-                }
+                DetectFaults((string)res.AsyncState);
                 BroadcastDeadServers((string)res.AsyncState);
             }
         }
@@ -668,12 +673,7 @@ namespace Server
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Server {0} is dead", res.AsyncState);
-                if (_serversStatus[(string)res.AsyncState] != true)
-                {
-                    _maxFaults--;
-                    _serversStatus[(string)res.AsyncState] = true;
-                }
+                DetectFaults((string)res.AsyncState);
                 BroadcastDeadServers((string)res.AsyncState);
             }
         }
@@ -736,12 +736,7 @@ namespace Server
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Server {0} is dead", res.AsyncState);
-                if (_serversStatus[(string)res.AsyncState] != true)
-                {
-                    _maxFaults--;
-                    _serversStatus[(string)res.AsyncState] = true;
-                }
+                DetectFaults((string)res.AsyncState);
                 BroadcastDeadServers((string)res.AsyncState);
             }
         }
@@ -793,12 +788,7 @@ namespace Server
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Server {0} is dead", res.AsyncState);
-                if (_serversStatus[(string)res.AsyncState] != true)
-                {
-                    _maxFaults--;
-                    _serversStatus[(string)res.AsyncState] = true;
-                }
+                DetectFaults((string)res.AsyncState);
                 BroadcastDeadServers((string)res.AsyncState);
             }
         }
