@@ -356,7 +356,9 @@ namespace Server
             int maxCapacity = 0;
             foreach (KeyValuePair<string, Room> room in location.Rooms)
             {
-                if (room.Value.RoomAvailability == Room.RoomStatus.NONBOOKED)
+               // if (room.Value.RoomAvailability == Room.RoomStatus.NONBOOKED)
+               //checks if the room is available for that day
+                if (!room.Value.BookedDays.Contains(finalDateLocation))
                 {
                     possibleRooms.Add(room.Value.Capacity, room.Value); 
 
@@ -389,7 +391,7 @@ namespace Server
             {
                 //changes the room availability to booked if it doesn't get cancelled
                 //_locations[finalDateLocation.LocationName].Rooms[finalRoom.Name].RoomAvailability = Room.RoomStatus.BOOKED;
-                _locations[finalDateLocation.LocationName].Rooms[finalRoom.Name].RoomAvailability = Room.RoomStatus.BOOKED;
+                _locations[finalDateLocation.LocationName].Rooms[finalRoom.Name].AddBookedDay(finalDateLocation);
                 BroadcastUpdateLocation(location);
                 return finalRoom;
                 
