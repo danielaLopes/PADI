@@ -20,7 +20,7 @@ namespace ClassLibrary
         public int MinAttendees { get; set; }
         public List<DateLocation> DateLocationSlots { get; set; }
         public List<string> Invitees { get; set; }
-        public SortedDictionary<string, MeetingRecord> Records { get; set; }
+        public List<MeetingRecord> Records { get; set; }
         // Maintains info on records that failed due to concurrent join and closes
         public List<MeetingRecord> FailedRecords { get; set; }
         // Maintains info on records that failed due to not enough participants' slots
@@ -32,7 +32,7 @@ namespace ClassLibrary
 
         public void AddMeetingRecord(MeetingRecord record)
         {
-            Records.Add(record.Name,record);
+            Records.Add(record);
         }
 
         public void AddFailedRecord(MeetingRecord record)
@@ -90,10 +90,12 @@ namespace ClassLibrary
     }
 
     [Serializable]
-    public class MeetingRecord
+    public class MeetingRecord : IEquatable<MeetingRecord>, IComparable
     {
         public string Name { get; set; }
         public List<DateLocation> DateLocationSlots { get; set; }
+
+        public VectorClock _vector { get; set; }
 
         public override string ToString()
         {
@@ -103,6 +105,31 @@ namespace ClassLibrary
                 slots += slot.ToString() + " ";
             }
             return Name + " " + slots;
+        }
+
+        // Default comparer for MeetingRecord type.
+        public int CompareTo(object compareRecord)
+        {
+            // A null value means that this object is greater.
+            if (compareRecord == null)
+                return 1;
+
+            MeetingRecord rec = compareRecord as MeetingRecord;
+
+            int clockComparison = this._vector.CompareTo(rec._vector);
+
+            // if an order between vector clocks can't be established => alphabetical order
+            if (clockComparison == 0)
+                return Name.CompareTo(rec.Name);
+
+            return clockComparison;
+        }
+
+        public bool Equals(MeetingRecord compareRecord)
+        {
+            if (compareRecord == null)
+                return false;
+            return compareRecord.Name.Equals(Name);
         }
     }
 }

@@ -80,6 +80,8 @@ namespace Client
                 // retrieve server's proxy
                 _remoteServer = (IServer)Activator.GetObject(typeof(IServer), serverUrl);
                 _remoteServerUrl = serverUrl;
+                // register new user in remote server
+                _remoteServer.RegisterUser(USERNAME, CLIENT_URL);
             }
             catch(Exception e)
             {
@@ -115,6 +117,9 @@ namespace Client
             {
                 _knownClientUrls = _remoteServer.AskForUpdateClients();
                 UpdateClients(_knownClientUrls);
+                Console.WriteLine("URLS:");
+                foreach (string u in _knownClientUrls)
+                    Console.WriteLine(u);
             }
             catch (Exception e)
             {
@@ -134,7 +139,7 @@ namespace Client
                 MinAttendees = Int32.Parse(minAttendees),
                 DateLocationSlots = parsedSlots,
                 Invitees = parsedInvitees,
-                Records = new SortedDictionary<string, MeetingRecord>(),
+                Records = new List<MeetingRecord>(),
                 FailedRecords = new List<MeetingRecord>(),
                 FullRecords = new List<MeetingRecord>(),
                 Participants = new List<string>(),
@@ -319,6 +324,10 @@ namespace Client
                 int i = 0;
                 foreach (string invitee in invitees.GetRange(0, threshold))
                 {
+                    Console.WriteLine(invitee);
+                    Console.WriteLine("AAAAAAAA");
+                    foreach(string k in _clients.Keys)
+                        Console.WriteLine(k);
                     if (i == 0)
                     {
                         _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls.Count,
