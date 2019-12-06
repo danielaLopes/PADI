@@ -15,7 +15,7 @@ namespace ClassLibrary
         /// key: String corresponding to server url
         /// Value: int corresponding to relative time
         /// </summary>
-        public ConcurrentDictionary<String, int> _currentVectorClock { get; set; } = new ConcurrentDictionary<String, int>();
+        public ConcurrentDictionary<string, int> _currentVectorClock { get; set; } = new ConcurrentDictionary<string, int>();
 
         public VectorClock(String selfUrl, ICollection<String> otherUrls)
         {
@@ -23,6 +23,12 @@ namespace ClassLibrary
             foreach (String url in otherUrls)
                 _currentVectorClock[url] = 0;
         }
+
+        public VectorClock(ConcurrentDictionary<string, int> vec)
+        {
+            _currentVectorClock = new ConcurrentDictionary<string, int>(vec);
+        }
+
 
         public void incrementVectorClock(String serverUrl)
         {
