@@ -43,6 +43,12 @@ namespace ClassLibrary
             Rooms = new Dictionary<string, Room>();
         }
 
+        /*public override bool Equals(object obj)
+        {
+            Location location = (Location)obj;
+            return (location != null) && (this.Name.Equals(location.Name)) && (this.date.Equals(dateLocation.date));
+        }*/
+
         public void AddRoom(Room room)
         {
             Rooms.Add(room.Name, room);
@@ -71,12 +77,19 @@ namespace ClassLibrary
         public string Name { get; set; }
         public int Capacity { get; set; }
         public RoomStatus RoomAvailability { get; set; }
+        public List<DateLocation> BookedDays { get; set; }
 
-        public Room(string name, int capacity, RoomStatus roomAvailability)
+        public Room(string name = "", int capacity = 0, RoomStatus roomAvailability = RoomStatus.NONBOOKED)
         {
             this.Name = name;
             this.Capacity = capacity;
             this.RoomAvailability = roomAvailability;
+            this.BookedDays = new List<DateLocation>();
+        }
+
+        public void AddBookedDay(DateLocation dateLocation)
+        {
+            BookedDays.Add(dateLocation);
         }
 
         public override string ToString()

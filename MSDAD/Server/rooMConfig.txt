@@ -1,6 +1,2 @@
-<<<<<<< HEAD
 Lisboa 3 sala-tejo
-=======
-Lisboa 2 sala-tejo
->>>>>>> 3e8fdebcea802204860c61be2a4a24cf1bed7227
 Porto 4 sala-douro
