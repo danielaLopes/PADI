@@ -39,6 +39,10 @@ namespace ClassLibrary
 
         void ReceiveUpdateLocation(Location location);
 
+        void ReceiveDeadServers(string deadServer);
+
+        Room getAvailableRoom(DateLocation finalDateLocation, MeetingProposal proposal);
+
         IServer RegisterServer(string serverUrl);
 
         // vector clocks related methods
