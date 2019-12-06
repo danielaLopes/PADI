@@ -27,6 +27,7 @@ namespace ClassLibrary
      
         void Close(string topic, string urlFailed = null);
 
+
         // methods to be used by other servers
 
         void ReceiveNewMeeting(MeetingProposal meeting, VectorClock newVector);
@@ -38,6 +39,10 @@ namespace ClassLibrary
         void ReceiveClose(MeetingProposal proposal, VectorClock newVector);
 
         void ReceiveUpdateLocation(Location location);
+
+        void ReceiveDeadServers(string deadServer);
+
+        Room getAvailableRoom(DateLocation finalDateLocation, MeetingProposal proposal);
 
         IServer RegisterServer(string serverUrl);
 

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Remoting;
@@ -7,6 +6,7 @@ using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
 using System.Threading;
 using System.Collections.Concurrent;
+using System.Threading.Tasks;
 using ClassLibrary;
 
 namespace Client
@@ -33,6 +33,8 @@ namespace Client
         /// </summary>
         private Dictionary<string, bool> _serverStatus;
 
+        private int TIMEOUT = 10000;
+
         /// <summary>
         /// Creates TCP channel, saves relevant information for remoting, registers itself as
         /// remote object and gets preferred server's remote object.
@@ -44,6 +46,7 @@ namespace Client
         {
             USERNAME = username;
             CLIENT_URL = clientUrl;
+
             // creates TCP channel
             TcpChannel clientChannel = new TcpChannel(PortExtractor.Extract(CLIENT_URL));
             ChannelServices.RegisterChannel(clientChannel, false);
@@ -58,8 +61,8 @@ namespace Client
             foreach (string backup in backupServers)
             {
                 _serverStatus.Add(backup, false);
-                Console.WriteLine("Backup server assigned {0}", backup);
-            }     
+                Console.WriteLine("Added backup server {0}", backup);
+            }  
 
             _clients = new ConcurrentDictionary<string, IClient>();
             _knownClientUrls = new List<string>();           
@@ -73,35 +76,43 @@ namespace Client
             }
         }
 
-        public void RegisterNewServer(string serverUrl)
+        public void RegisterNewServer(string serverUrl, string previousUrl = null)
         {
-            try
+            Task task = Task.Factory.StartNew(() =>
             {
                 // retrieve server's proxy
                 _remoteServer = (IServer)Activator.GetObject(typeof(IServer), serverUrl);
                 _remoteServerUrl = serverUrl;
                 // register new user in remote server
-                _remoteServer.RegisterUser(USERNAME, CLIENT_URL);
-            }
-            catch(Exception e)
-            {
-                SwitchServer();
-            }
 
+                _remoteServer.RegisterUser(USERNAME, CLIENT_URL, previousUrl);
+            });
+            task.Wait(TimeSpan.FromMilliseconds(TIMEOUT));
+
+            if (task.Exception != null || task.IsCompleted == false)
+            {
+                string serverFailedUrl = _remoteServerUrl;
+                Console.WriteLine("SERVER failed {0}", serverFailedUrl);
+                SwitchServer();
+                RegisterNewServer(_remoteServerUrl, serverFailedUrl);
+                return;
+            }
             Console.WriteLine("Registered with server {0}", serverUrl);
         }
 
-        public void List()
+        public void List(string previousUrl = null)
         {
-            try
-            {
-                _remoteServer.List(USERNAME, _knownMeetingProposals);
-            }
-            catch(Exception e)
-            {
-                string previousUrl = _remoteServerUrl;
-                SwitchServer();
+            Task task = Task.Factory.StartNew(() => {
                 _remoteServer.List(USERNAME, _knownMeetingProposals, previousUrl);
+            });
+            task.Wait(TimeSpan.FromMilliseconds(TIMEOUT));
+            if (task.Exception != null || task.IsCompleted == false)
+            {
+                string serverFailedUrl = _remoteServerUrl;
+                Console.WriteLine("SERVER failed {0}", serverFailedUrl);
+                SwitchServer();
+                List(serverFailedUrl);
+                return;
             }
             
             foreach (KeyValuePair<string, MeetingProposal> meetingProposal in _knownMeetingProposals)
@@ -111,24 +122,30 @@ namespace Client
             }
         }
 
-        public void Create(string meetingTopic, string minAttendees, List<string> slots, List<string> invitees = null)
+        public void AskForUpdateClients(string previousUrl = null)
         {
-            try
+            Task task = Task.Factory.StartNew(() =>
             {
-                _knownClientUrls = _remoteServer.AskForUpdateClients();
-                UpdateClients(_knownClientUrls);
-                Console.WriteLine("URLS:");
-                foreach (string u in _knownClientUrls)
-                    Console.WriteLine(u);
-            }
-            catch (Exception e)
-            {
-                string previousUrl = _remoteServerUrl;
-                SwitchServer();
                 _knownClientUrls = _remoteServer.AskForUpdateClients(previousUrl);
                 UpdateClients(_knownClientUrls);
-            }
 
+            });
+            task.Wait(TimeSpan.FromMilliseconds(TIMEOUT));
+            if (task.Exception != null || task.IsCompleted == false)
+            {
+                string serverFailedUrl = _remoteServerUrl;
+                Console.WriteLine("SERVER failed {0}", serverFailedUrl);
+                SwitchServer();
+                AskForUpdateClients(serverFailedUrl);
+                return;
+            }
+        }
+
+        public void Create(string meetingTopic, string minAttendees, List<string> slots,
+                List<string> invitees = null)
+        {
+            AskForUpdateClients();
+ 
             List<DateLocation> parsedSlots = ParseSlots(slots);
             List<string> parsedInvitees = invitees;
             
@@ -145,16 +162,8 @@ namespace Client
                 Participants = new List<string>(),
                 MeetingStatus = MeetingStatus.OPEN
             };
-            try
-            {
-                _remoteServer.Create(proposal);
-            }
-            catch (Exception e)
-            {
-                string previousUrl = _remoteServerUrl;
-                SwitchServer();
-                _remoteServer.Create(proposal, previousUrl);
-            }            
+
+            Create(proposal);
 
             _knownMeetingProposals.Add(proposal.Topic, proposal);
 
@@ -182,6 +191,23 @@ namespace Client
             }
         }
 
+        public void Create(MeetingProposal proposal, string previousUrl = null)
+        {
+            Task task = Task.Factory.StartNew(() =>
+            {
+                _remoteServer.Create(proposal, previousUrl);
+            });
+            task.Wait(TimeSpan.FromMilliseconds(TIMEOUT));
+            if (task.Exception != null || task.IsCompleted == false)
+            {
+                string serverFailedUrl = _remoteServerUrl;
+                Console.WriteLine("SERVER failed {0}", serverFailedUrl);
+                SwitchServer();
+                Create(proposal, serverFailedUrl);
+                return;
+            }
+        }
+
         public void Join(string meetingTopic, List<string> slots)
         {
             if (_knownMeetingProposals.ContainsKey(meetingTopic))
@@ -193,30 +219,41 @@ namespace Client
                     Name = USERNAME,
                     DateLocationSlots = parsedSlots,
                 };
-                try
-                {
-                    _remoteServer.Join(USERNAME, meetingTopic, record);
-                }
-                catch(Exception e)
-                {
-                    string previousUrl = _remoteServerUrl;
-                    SwitchServer(); 
-                    _remoteServer.Join(USERNAME, meetingTopic, record, urlFailed:previousUrl);
-                }
+                
+                Join(meetingTopic, record);     
             }
         }
 
-        public void Close(string meetingTopic)
+        public void Join(string meetingTopic, MeetingRecord record, string previousUrl = null)
         {
-            try
+            Task task = Task.Factory.StartNew(() =>
             {
-                _remoteServer.Close(meetingTopic);
-            }
-            catch(Exception e)
+                _remoteServer.Join(USERNAME, meetingTopic, record, previousUrl);
+            });
+            task.Wait(TimeSpan.FromMilliseconds(TIMEOUT));
+            if (task.Exception != null || task.IsCompleted == false)
             {
-                string previousUrl = _remoteServerUrl;
+                string serverFailedUrl = _remoteServerUrl;
+                Console.WriteLine("SERVER failed {0}", serverFailedUrl);
                 SwitchServer();
+                Join(meetingTopic, record, serverFailedUrl);
+                return;
+            }
+        }
+
+        public void Close(string meetingTopic, string previousUrl = null)
+        {
+            Task task = Task.Factory.StartNew(() =>
+            {
                 _remoteServer.Close(meetingTopic, previousUrl);
+            });
+            task.Wait(TimeSpan.FromMilliseconds(TIMEOUT));
+            if (task.Exception != null || task.IsCompleted == false)
+            {
+                string serverFailedUrl = _remoteServerUrl;
+                SwitchServer();
+                Close(meetingTopic, serverFailedUrl);
+                return;
             }    
         }
 
@@ -292,79 +329,62 @@ namespace Client
         public void SendInvitations(List<string> invitees, MeetingProposal proposal)
         {
             // assumes every client knows every other client
-            int threshold = 2;
+            int threshold = (int)Math.Log(_knownClientUrls.Count, 2);
+            if (threshold == 0) threshold = 1;
 
-            foreach (string invitee in invitees)
+            Task task = Task.Factory.StartNew(() =>
             {
-                Console.WriteLine("invitee: {0}", invitee);
-            }          
-
-            // easy case: there are few invitees so we can 
-            // send the invitations directly
-            if (invitees.Count <= threshold)
-            {
-                foreach (string invitee in invitees)
-                {   
-                    // no need to send inviteesLeft because the invitation
-                    // is not going to need to be propapagated anymore
-                    _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls.Count);
-                }
-            }
-            // case with lots of invitees: send first directly and then
-            // those to deliver the rest of the messages
-            else
-            {
-                List<string> inviteesLeft = new List<string>(
-                        invitees.GetRange(threshold, invitees.Count - threshold));
-
-                // calculates how many clients must each client spread forward
-                int nInviteesForEach = (inviteesLeft.Count) / threshold;
-                int remainder = inviteesLeft.Count % threshold;
-
-                int i = 0;
-                foreach (string invitee in invitees.GetRange(0, threshold))
+                // easy case: there are few invitees so we can 
+                // send the invitations directly
+                if (invitees.Count <= threshold)
                 {
-                    Console.WriteLine(invitee);
-                    Console.WriteLine("AAAAAAAA");
-                    foreach(string k in _clients.Keys)
-                        Console.WriteLine(k);
-                    if (i == 0)
+                    foreach (string invitee in invitees)
                     {
-                        _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls.Count,
-                            inviteesLeft.GetRange(0, nInviteesForEach + remainder));
-                        /*foreach (string name in inviteesLeft.GetRange(0, nInviteesForEach + remainder))
-                        {
-                            Console.WriteLine("first case {0}", name);
-                        } */                  
+                        // no need to send inviteesLeft because the invitation
+                        // is not going to need to be propapagated anymore
+                        _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls.Count);
                     }
-                    else
-                    {
-                        _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls.Count,
-                                inviteesLeft.GetRange(nInviteesForEach * i + remainder, nInviteesForEach));
-                        /*foreach (string name in inviteesLeft.GetRange(nInviteesForEach * i + remainder, nInviteesForEach))
-                        {
-                            Console.WriteLine("second case {0}", name);
-                        }*/
-                    } 
-                    i++;
                 }
-            }
+                // case with lots of invitees: send first directly and then
+                // those to deliver the rest of the messages
+                else
+                {
+                    List<string> inviteesLeft = new List<string>(
+                            invitees.GetRange(threshold, invitees.Count - threshold));
+
+                    // calculates how many clients must each client spread forward
+                    int nInviteesForEach = (inviteesLeft.Count) / threshold;
+                    int remainder = inviteesLeft.Count % threshold;
+
+
+                    int i = 0;
+                    foreach (string invitee in invitees.GetRange(0, threshold))
+                    {
+                        if (i == 0)
+                        {
+                            _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls.Count,
+                                inviteesLeft.GetRange(0, nInviteesForEach + remainder));
+                        }
+                        else
+                        {
+                            _clients[invitee].ReceiveInvitation(proposal, _knownClientUrls.Count,
+                                    inviteesLeft.GetRange(nInviteesForEach * i + remainder, nInviteesForEach));
+                        }
+                        i++;
+                    }
+                }
+                Console.WriteLine("finished sending invitations");
+            });
+            Console.WriteLine("finished sendInvitations method");
         }
 
-        public void ReceiveInvitation(MeetingProposal proposal, int nClients, List<string> inviteesLeft = null)
+        public void ReceiveInvitation(MeetingProposal proposal, int nClients, 
+                List<string> inviteesLeft = null, string previousUrl = null)
         {
             // updates clients known if it's client count is not right
             if (_knownClientUrls.Count != nClients)
             {
-                try
-                {
-                    _knownClientUrls = _remoteServer.AskForUpdateClients();
-                    UpdateClients(_knownClientUrls);
-                }
-                catch(Exception e)
-                {
-                    SwitchServer();
-                }
+                AskForUpdateClients();
             }
 
             if (inviteesLeft != null)
