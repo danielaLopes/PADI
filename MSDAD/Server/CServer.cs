@@ -273,7 +273,7 @@ namespace Server
                 Console.WriteLine(record.Name + " joined meeting proposal " + proposal.Topic + ".");
             }
         }
-        public void Close(string topic, string urlFailed = null, bool local = true)
+        public void Close(string topic, string urlFailed = null)
         {
             while (_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
