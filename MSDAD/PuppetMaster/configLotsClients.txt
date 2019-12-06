@@ -1,0 +1,16 @@
+AddRoom Lisboa 2 sala-tejo
+AddRoom Porto 4 sala-douro
+Server 1 tcp://localhost:9898/1 0 0 0
+Server 2 tcp://localhost:9899/2 0 0 0
+Client maria tcp://localhost:9090/maria tcp://localhost:9899/2 C:../../../Client/clientCommandsMaria.txt
+Client joao tcp://localhost:9091/joao tcp://localhost:9898/1 C:../../../Client/clientCommandsJoao.txt
+Client jola tcp://localhost:9092/jola tcp://localhost:9898/1 C:../../../Client/clientCommands.txt
+Client jolina tcp://localhost:9095/jolina tcp://localhost:9899/2 C:../../../Client/clientCommands.txt
+Client bia tcp://localhost:9093/bia tcp://localhost:9333/2 C:../../../Client/clientCommands.txt
+Client joaquina tcp://localhost:9333/joaquina tcp://localhost:9899/2 C:../../../Client/clientCommands.txt
+Client bebe tcp://localhost:9334/bebe tcp://localhost:9899/2 C:../../../Client/clientCommands.txt
+Client toze tcp://localhost:9335/toze tcp://localhost:9898/1 C:../../../Client/clientCommands.txt
+Client lollies tcp://localhost:9336/lollies tcp://localhost:9898/1 C:../../../Client/clientCommands.txt
+Client juju tcp://localhost:9337/juju tcp://localhost:9898/1 C:../../../Client/clientCommands.txt
+Client tete tcp://localhost:9338/tete tcp://localhost:9898/1 C:../../../Client/clientCommands.txt
+Client coalas tcp://localhost:9339/coalas tcp://localhost:9898/1 C:../../../Client/clientCommands.txt

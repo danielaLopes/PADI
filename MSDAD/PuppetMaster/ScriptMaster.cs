@@ -35,7 +35,7 @@ namespace PuppetMaster
             {
                 if (fields[0].Equals("Server"))
                 {
-                    WaitServerHandles.Add(Server(strFields, fields[1], fields[2]).AsyncWaitHandle);
+                    WaitServerHandles.Add(Server(strFields, fields[1], fields[2], Int32.Parse(fields[3])).AsyncWaitHandle);
                 }
                 else if (fields[0].Equals("Client"))
                 {
