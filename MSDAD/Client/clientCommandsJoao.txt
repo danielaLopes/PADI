@@ -1,5 +1,5 @@
 wait 1000
-create adeus 1 2 0 Lisboa,2020-01-02 Lisboa,2010-01-03
+create adeus 1 2 0 Lisboa,2020-01-02 Lisboa,2010-01-03 maria
 wait 1000
 join adeus 1 Lisboa,2020-01-02
 close adeus
