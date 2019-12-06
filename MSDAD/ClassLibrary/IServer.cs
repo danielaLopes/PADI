@@ -25,7 +25,7 @@ namespace ClassLibrary
 
         void Join(string username, string topic, MeetingRecord record, string urlFailed = null, bool local = true);
      
-        void Close(string topic, string urlFailed = null, bool local = true);
+        void Close(string topic, string urlFailed = null/*, bool local = true*/);
 
         // methods to be used by other servers
 
