@@ -995,78 +995,7 @@ namespace Server
         /// </param>
         static void Main(string[] args)
         {
-
-            // caso em que nao há ordem
-            ConcurrentDictionary<string, int> dic1 = new ConcurrentDictionary<string, int> { ["1"] = 1, ["2"] = 1, ["3"] = 1 };
-            ConcurrentDictionary<string, int> dic2 = new ConcurrentDictionary<string, int> { ["1"] = 3, ["2"] = 0, ["3"] = 0 };
-            ConcurrentDictionary<string, int> dic3 = new ConcurrentDictionary<string, int> { ["1"] = 1, ["2"] = 1, ["3"] = 0 };
-            ConcurrentDictionary<string, int> dic4 = new ConcurrentDictionary<string, int> { ["1"] = 1, ["2"] = 0, ["3"] = 0 };
-            ConcurrentDictionary<string, int> dic5 = new ConcurrentDictionary<string, int> { ["1"] = 5, ["2"] = 4, ["3"] = 3 };
-
-            VectorClock vec1 = new VectorClock(dic1);
-            VectorClock vec2 = new VectorClock(dic2);
-            VectorClock vec3 = new VectorClock(dic3);
-            VectorClock vec4 = new VectorClock(dic4);
-            VectorClock vec5 = new VectorClock(dic5);
-
-            MeetingRecord rec1 = new MeetingRecord
-            {
-                Name = "Adriana",
-                _vector = vec1
-            };
-
-            MeetingRecord rec2 = new MeetingRecord
-            {
-                Name = "Bárbara",
-                _vector = vec2
-            };
-            MeetingRecord rec5 = new MeetingRecord
-            {
-                Name = "Cátia",
-                _vector = vec5
-            };
-            MeetingRecord rec3 = new MeetingRecord
-            {
-                Name = "Diogo",
-                _vector = vec3
-            };
-            MeetingRecord rec4 = new MeetingRecord
-            {
-                Name = "Eva",
-                _vector = vec4
-            };
-
-            List<MeetingRecord> allRecords = new List<MeetingRecord> { rec5, rec2, rec3, rec4, rec1 };
-            allRecords.Sort();
-            Console.WriteLine(" ");
-            Console.WriteLine("FINAL ORDER");
-            foreach (MeetingRecord rec in allRecords)
-            {
-                Console.WriteLine(rec.Name);
-                rec._vector.printVectorClock("");
-            }
-
-            List<MeetingRecord> allRecords1 = new List<MeetingRecord> { rec5, rec1, rec2, rec3, rec4 };
-            allRecords1.Sort();
-            Console.WriteLine(" ");
-            Console.WriteLine("FINAL ORDER");
-            foreach (MeetingRecord rec in allRecords1)
-            {
-                Console.WriteLine(rec.Name);
-                rec._vector.printVectorClock("");
-            }
-
-            List<MeetingRecord> allRecords2 = new List<MeetingRecord> { rec5, rec1, rec3, rec2, rec4 };
-            allRecords2.Sort();
-            Console.WriteLine(" ");
-            Console.WriteLine("FINAL ORDER");
-            foreach (MeetingRecord rec in allRecords2)
-            {
-                Console.WriteLine(rec.Name);
-                rec._vector.printVectorClock("");
-            }
-
-
+            
             CServer server;
 
             if (args.Length > 6)
