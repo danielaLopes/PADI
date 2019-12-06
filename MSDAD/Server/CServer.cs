@@ -142,19 +142,23 @@ namespace Server
         // ------------------- COMMANDS SENT BY CLIENTS -------------------
 
 
-        public void RegisterUser(string username, string clientUrl, string urlFailed = null) 
+        public void RegisterUser(string username, string clientUrl, string urlFailed = null)
         {
+            Console.WriteLine("REGISTER USER");
             while (_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
 
             // obtain client remote object
             if (_clients.TryAdd(username, (IClient)Activator.GetObject(typeof(IClient), clientUrl)))
             {
+                Console.WriteLine("BEFORE LOCK");
                 lock (_clientUrls)
                 {
+                    Console.WriteLine("BEFORE ADD");
                     _clientUrls.Add(clientUrl);
+                    Console.WriteLine("New user {0} with url {0} registered.", username, clientUrl);
                 }
-                Console.WriteLine("New user {0} with url {0} registered.", username, clientUrl);
+                
             }
             else
             {
@@ -165,6 +169,10 @@ namespace Server
 
         public List<string> AskForUpdateClients(string urlFailed = null)
         {
+            Console.WriteLine("askforupdate");
+            foreach (string user in _clientUrls) {
+                Console.WriteLine("client url {0}", user );
+            }
             return _clientUrls;
 
         }
@@ -236,10 +244,11 @@ namespace Server
                 {
                     if (!proposal.FailedRecords.Contains(record))
                     {
+
                         proposal.AddFailedRecord(record);
 
                         // we update the respective vector clock
-                        if(local) incrementVectorClock(topic);
+                        if (local) incrementVectorClock(topic);
 
                         // we update the respective log
                         updateLog(topic, record, username);
@@ -259,6 +268,7 @@ namespace Server
                             }
                         }
                     }
+
                     proposal.AddMeetingRecord(record);
 
                     // we update the respective vector clock
@@ -316,23 +326,29 @@ namespace Server
 
                 proposal.FinalRoom = finalRoom;
                 proposal.FinalDateLocation = finalDateLocation;
-                foreach (KeyValuePair<string, MeetingRecord> record in proposal.Records)
-                {
 
-                    if (record.Value.DateLocationSlots.Contains(finalDateLocation))
+                // sort records by VectorClock
+                proposal.Records.Sort();
+
+                
+                foreach (MeetingRecord record in proposal.Records)
+                {
+                    Console.WriteLine(record.ToString());
+
+                    if (record.DateLocationSlots.Contains(finalDateLocation))
                     {
                         countInvitees++;
 
-                        Console.WriteLine("record " + record.Value);
+                        Console.WriteLine("record " + record);
 
                         //if there's more invitees than the room capacity they go to a special list
                         if (countInvitees > proposal.FinalRoom.Capacity)//maxCapacity)
                         {
-                            proposal.AddFullRecord(record.Value);
+                            proposal.AddFullRecord(record);
                         }
                         else
                         {
-                            proposal.Participants.Add(record.Value.Name);
+                            proposal.Participants.Add(record.Name);
                         }
                     }
                 }
@@ -597,7 +613,7 @@ namespace Server
 
             if (_currentMeetingProposals.TryGetValue(proposal.Topic, out previousProposal))
             {
-                if (!previousProposal.Records.ContainsKey(record.Name)) //stop condition request already received
+                if (!previousProposal.Records.Contains(record)) //stop condition request already received
                 {
                     //_currentMeetingProposals[proposal.Topic] = proposal;
                     //BroadcastJoin(username, proposal, record);
@@ -879,8 +895,9 @@ namespace Server
             }
             else
             {
+                // meeting record will now have a VectorClock associated for posterior sorting
+                record._vector = copy;
                 // we register a new join operation
-               
                 _operationsLog[meetingTopic].Add(new JoinOperation(copy, record, username));
             }
 
@@ -1016,8 +1033,7 @@ namespace Server
         /// </param>
         static void Main(string[] args)
         {
-
-
+            
             CServer server;
 
             if (args.Length > 6)
