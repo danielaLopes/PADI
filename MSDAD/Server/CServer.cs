@@ -142,7 +142,7 @@ namespace Server
         // ------------------- COMMANDS SENT BY CLIENTS -------------------
 
 
-        public void RegisterUser(string username, string clientUrl, string urlFailed = null) 
+        public void RegisterUser(string username, string clientUrl, bool serverFailed, string urlFailed = null) 
         {
             while (_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
@@ -160,7 +160,7 @@ namespace Server
             {
                 Console.WriteLine("not possible to register user {0} with URL: {1}. Try again", username, clientUrl);
             }
-            BroadcastNewClient(clientUrl);
+            if (!serverFailed) BroadcastNewClient(clientUrl);
         }
 
         public List<string> AskForUpdateClients(string urlFailed = null)

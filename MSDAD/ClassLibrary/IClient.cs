@@ -15,6 +15,6 @@ namespace ClassLibrary
 
         // methods to be used by other clients
         void ReceiveInvitation(MeetingProposal proposal, int nClients, 
-                List<string> inviteesLeft = null, string previousUrl = null);
+                List<string> inviteesLeft = null);
     }
 }

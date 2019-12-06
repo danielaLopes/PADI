@@ -17,7 +17,7 @@ namespace ClassLibrary
         // methods to be used by Clients
         List<string> AskForUpdateClients(string urlFailed = null);
 
-        void RegisterUser(string username, string clientUrl, string urlFailed = null);
+        void RegisterUser(string username, string clientUrl, bool serverFailed, string urlFailed = null);
 
         void Create(MeetingProposal proposal, string urlFailed = null);
 
