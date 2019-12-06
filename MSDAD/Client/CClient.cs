@@ -84,6 +84,7 @@ namespace Client
                 _remoteServer = (IServer)Activator.GetObject(typeof(IServer), serverUrl);
                 _remoteServerUrl = serverUrl;
                 // register new user in remote server
+
                 _remoteServer.RegisterUser(USERNAME, CLIENT_URL, previousUrl);
             });
             task.Wait(TimeSpan.FromMilliseconds(TIMEOUT));
@@ -127,6 +128,7 @@ namespace Client
             {
                 _knownClientUrls = _remoteServer.AskForUpdateClients(previousUrl);
                 UpdateClients(_knownClientUrls);
+
             });
             task.Wait(TimeSpan.FromMilliseconds(TIMEOUT));
             if (task.Exception != null || task.IsCompleted == false)
@@ -154,7 +156,7 @@ namespace Client
                 MinAttendees = Int32.Parse(minAttendees),
                 DateLocationSlots = parsedSlots,
                 Invitees = parsedInvitees,
-                Records = new SortedDictionary<string, MeetingRecord>(),
+                Records = new List<MeetingRecord>(),
                 FailedRecords = new List<MeetingRecord>(),
                 FullRecords = new List<MeetingRecord>(),
                 Participants = new List<string>(),
@@ -353,6 +355,7 @@ namespace Client
                     // calculates how many clients must each client spread forward
                     int nInviteesForEach = (inviteesLeft.Count) / threshold;
                     int remainder = inviteesLeft.Count % threshold;
+
 
                     int i = 0;
                     foreach (string invitee in invitees.GetRange(0, threshold))
