@@ -44,8 +44,16 @@ namespace Client
         {
             USERNAME = username;
             CLIENT_URL = clientUrl;
+
+            System.Collections.IDictionary properties = new System.Collections.Hashtable();
+            //properties["name"] = Ipc_Channel_Name;
+            properties["port"] = PortExtractor.Extract(CLIENT_URL);
+            properties["connectionTimeout"] = 5000;
+            BinaryClientFormatterSinkProvider clientProvider = new BinaryClientFormatterSinkProvider();
+            BinaryServerFormatterSinkProvider serverProvider = new BinaryServerFormatterSinkProvider();
+
             // creates TCP channel
-            TcpChannel clientChannel = new TcpChannel(PortExtractor.Extract(CLIENT_URL));
+            TcpChannel clientChannel = new TcpChannel(properties, clientProvider, serverProvider);
             ChannelServices.RegisterChannel(clientChannel, false);
             // create the client's remote object
             RemotingServices.Marshal(this, username, typeof(CClient));
