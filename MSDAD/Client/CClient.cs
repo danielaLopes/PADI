@@ -104,8 +104,7 @@ namespace Client
             Console.WriteLine("Registered with server {0}", serverUrl);
         }
 
-
-        public void List()
+        public void RemoteList()
         {
             try
             {
@@ -118,19 +117,26 @@ namespace Client
                     throw new TimeoutException("Timeout in list");
                 }
             }
-            catch(AggregateException e)
+            catch (AggregateException e)
             {
                 DetectDeadServer();
                 SwitchServer();
-                List();
+                RemoteList();
             }
             catch (TimeoutException e)
             {
                 DetectDeadServer();
                 SwitchServer();
-                List();
+                RemoteList();
             }
+        }
 
+        public void List()
+        {
+            int timeb = DateTime.Now.Millisecond;
+            RemoteList();
+            int timea = DateTime.Now.Millisecond;
+            Console.WriteLine("time passed " + (timea - timeb));
             foreach (KeyValuePair<string, MeetingProposal> meetingProposal in _knownMeetingProposals)
             {
                 MeetingProposal proposal = meetingProposal.Value;
@@ -195,6 +201,7 @@ namespace Client
 
         public void Create(string meetingTopic, string minAttendees, List<string> slots, List<string> invitees = null)
         {
+            int timeb = DateTime.Now.Millisecond;
             InitClients();
 
             List<DateLocation> parsedSlots = ParseSlots(slots);
@@ -217,6 +224,9 @@ namespace Client
             RemoteCreate(proposal);
 
             _knownMeetingProposals.Add(proposal.Topic, proposal);
+
+            int timea = DateTime.Now.Millisecond;
+            Console.WriteLine("time passed " + (timea - timeb));
 
             if (invitees == null)
             {
@@ -274,6 +284,7 @@ namespace Client
 
         public void Join(string meetingTopic, List<string> slots)
         {
+            int timeb = DateTime.Now.Millisecond;
             if (_knownMeetingProposals.ContainsKey(meetingTopic))
             {
 
@@ -286,6 +297,9 @@ namespace Client
 
                 RemoteJoin(meetingTopic, record);
             }
+            int timea = DateTime.Now.Millisecond;
+            Console.WriteLine("time passed " + (timea - timeb));
+
         }
 
         public void RemoteClose(string meetingTopic)
@@ -303,12 +317,14 @@ namespace Client
             }
             catch (AggregateException e)
             {
+                Console.WriteLine("hi");
                 DetectDeadServer();
                 SwitchServer();
                 RemoteClose(meetingTopic);
             }
             catch (TimeoutException e)
             {
+                Console.WriteLine("hi2");
                 DetectDeadServer();
                 SwitchServer();
                 RemoteClose(meetingTopic);
@@ -316,7 +332,10 @@ namespace Client
         }
         public void Close(string meetingTopic)
         {
+            int timeb = DateTime.Now.Millisecond;
             RemoteClose(meetingTopic);
+            int timea = DateTime.Now.Millisecond;
+            Console.WriteLine("time passed " + (timea - timeb));
         }
 
         public void Wait(string milliseconds)

@@ -222,6 +222,7 @@ namespace Server
             while (_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
             MeetingProposal proposal;
+            
             if (!_currentMeetingProposals.TryGetValue(topic, out proposal))
             {
                 // if the server does not have a meeting, he tells the client to switch to a different server
@@ -229,15 +230,41 @@ namespace Server
             }
             else
             {
-                // Checks if the join arrived after the meeting is closed, in that 
-                // case it maintains a record with a special status, FAILED
-                if (proposal.MeetingStatus.Equals(MeetingStatus.CLOSED) ||
-                        proposal.MeetingStatus.Equals(MeetingStatus.CANCELLED))
+                if (!proposal.Records.Contains(record))
                 {
-                    if (!proposal.FailedRecords.Contains(record))
+                    // Checks if the join arrived after the meeting is closed, in that 
+                    // case it maintains a record with a special status, FAILED
+                    if (proposal.MeetingStatus.Equals(MeetingStatus.CLOSED) ||
+                            proposal.MeetingStatus.Equals(MeetingStatus.CANCELLED))
                     {
+                        if (!proposal.FailedRecords.Contains(record))
+                        {
 
-                        proposal.AddFailedRecord(record);
+                            proposal.AddFailedRecord(record);
+
+                            // we update the respective vector clock
+                            if (local) incrementVectorClock(topic);
+
+                            // we update the respective log
+                            updateLog(topic, record, username);
+
+                            BroadcastJoin(username, proposal, record);
+                        }
+                    }
+                    else
+                    {   //increments the number of invitees that can go to that slot
+                        foreach (DateLocation date1 in proposal.DateLocationSlots)
+                        {
+                            foreach (DateLocation date2 in record.DateLocationSlots)
+                            {
+                                if (date1.Equals(date2))
+                                {
+                                    date1.Invitees++;
+                                }
+                            }
+                        }
+
+                        proposal.AddMeetingRecord(record);
 
                         // we update the respective vector clock
                         if (local) incrementVectorClock(topic);
@@ -247,32 +274,9 @@ namespace Server
 
                         BroadcastJoin(username, proposal, record);
                     }
+
+                    Console.WriteLine(record.Name + " joined meeting proposal " + proposal.Topic + ".");
                 }
-                else
-                {   //increments the number of invitees that can go to that slot
-                    foreach (DateLocation date1 in proposal.DateLocationSlots)
-                    {
-                        foreach (DateLocation date2 in record.DateLocationSlots)
-                        {
-                            if (date1.Equals(date2))
-                            {
-                                date1.Invitees++;
-                            }
-                        }
-                    }
-
-                    proposal.AddMeetingRecord(record);
-
-                    // we update the respective vector clock
-                    if(local) incrementVectorClock(topic);
-
-                    // we update the respective log
-                    updateLog(topic, record, username);
-
-                    BroadcastJoin(username, proposal, record);
-                }
-
-                Console.WriteLine(record.Name + " joined meeting proposal " + proposal.Topic + ".");
             }
         }
         public void Close(string topic, string urlFailed = null)
@@ -280,83 +284,86 @@ namespace Server
             while (_isFrozen) { }
             Thread.Sleep(RandomIncomingMessageDelay());
 
-            if (_serverLocation == null)
+            if (_currentMeetingProposals[topic].MeetingStatus == MeetingStatus.OPEN)
             {
-                List<string> aliveUrls = new List<string>();
-                foreach (KeyValuePair<string, bool> url in _serversStatus)
+                if (_serverLocation == null)
                 {
-                    if (url.Value == false) aliveUrls.Add(url.Key);
-                }
-                aliveUrls.Sort();
-                _serverLocation = aliveUrls[0];
-                Console.WriteLine("server location" + _serverLocation);
-            }
-
-            MeetingProposal proposal = _currentMeetingProposals[topic];
-
-            DateLocation finalDateLocation = new DateLocation();
-
-            // each dateLocation has the number of invitees that can go to that slot
-            foreach (DateLocation dateLocation in proposal.DateLocationSlots) 
-            {
-                if (dateLocation.Invitees > finalDateLocation.Invitees) //chooses the dateLocation with more invitees
-                {
-
-                    finalDateLocation = dateLocation;
-                }
-            }
-
-            Room finalRoom = _servers[_serverLocation].getAvailableRoom(finalDateLocation, proposal);
-
-            
-            if (finalDateLocation.Invitees < proposal.MinAttendees || finalRoom == null)
-            {
-                proposal.MeetingStatus = MeetingStatus.CANCELLED;
-            }
-
-            else
-            {
-                int countInvitees = 0;
-                proposal.MeetingStatus = MeetingStatus.CLOSED;
-
-                proposal.FinalRoom = finalRoom;
-                proposal.FinalDateLocation = finalDateLocation;
-
-                // sort records by VectorClock
-                proposal.Records.Sort();
-
-                
-                foreach (MeetingRecord record in proposal.Records)
-                {
-                    Console.WriteLine(record.ToString());
-
-                    if (record.DateLocationSlots.Contains(finalDateLocation))
+                    List<string> aliveUrls = new List<string>();
+                    foreach (KeyValuePair<string, bool> url in _serversStatus)
                     {
-                        countInvitees++;
+                        if (url.Value == false) aliveUrls.Add(url.Key);
+                    }
+                    aliveUrls.Sort();
+                    _serverLocation = aliveUrls[0];
+                    Console.WriteLine("server location" + _serverLocation);
+                }
 
-                        Console.WriteLine("record " + record);
+                MeetingProposal proposal = _currentMeetingProposals[topic];
 
-                        //if there's more invitees than the room capacity they go to a special list
-                        if (countInvitees > proposal.FinalRoom.Capacity)//maxCapacity)
+                DateLocation finalDateLocation = new DateLocation();
+
+                // each dateLocation has the number of invitees that can go to that slot
+                foreach (DateLocation dateLocation in proposal.DateLocationSlots)
+                {
+                    if (dateLocation.Invitees > finalDateLocation.Invitees) //chooses the dateLocation with more invitees
+                    {
+
+                        finalDateLocation = dateLocation;
+                    }
+                }
+
+                Room finalRoom = _servers[_serverLocation].getAvailableRoom(finalDateLocation, proposal);
+
+
+                if (finalDateLocation.Invitees < proposal.MinAttendees || finalRoom == null)
+                {
+                    proposal.MeetingStatus = MeetingStatus.CANCELLED;
+                }
+
+                else
+                {
+                    int countInvitees = 0;
+                    proposal.MeetingStatus = MeetingStatus.CLOSED;
+
+                    proposal.FinalRoom = finalRoom;
+                    proposal.FinalDateLocation = finalDateLocation;
+
+                    // sort records by VectorClock
+                    proposal.Records.Sort();
+
+
+                    foreach (MeetingRecord record in proposal.Records)
+                    {
+                        Console.WriteLine(record.ToString());
+
+                        if (record.DateLocationSlots.Contains(finalDateLocation))
                         {
-                            proposal.AddFullRecord(record);
-                        }
-                        else
-                        {
-                            proposal.Participants.Add(record.Name);
+                            countInvitees++;
+
+                            Console.WriteLine("record " + record);
+
+                            //if there's more invitees than the room capacity they go to a special list
+                            if (countInvitees > proposal.FinalRoom.Capacity)//maxCapacity)
+                            {
+                                proposal.AddFullRecord(record);
+                            }
+                            else
+                            {
+                                proposal.Participants.Add(record.Name);
+                            }
                         }
                     }
                 }
+                Console.WriteLine(proposal.Coordinator + " closed meeting proposal " + proposal.Topic + ".");
+
+                // we update the respective vector clock
+                incrementVectorClock(topic);
+
+                // we update the respective log
+                updateLog(topic);
+
+                BroadcastClose(proposal);
             }
-            Console.WriteLine(proposal.Coordinator + " closed meeting proposal " + proposal.Topic + ".");
-
-            // we update the respective vector clock
-            incrementVectorClock(topic);
-
-            // we update the respective log
-            updateLog(topic);
-
-            BroadcastClose(proposal);
         }
 
         public Room getAvailableRoom(DateLocation finalDateLocation, MeetingProposal proposal)
@@ -750,6 +757,7 @@ namespace Server
             {
                 _serversStatus[deadServer] = true;
                 _maxFaults--;
+                if (_serverLocation == deadServer) _serverLocation = null;
                 BroadcastDeadServers(deadServer);
             }
         }
